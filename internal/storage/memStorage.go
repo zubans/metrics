@@ -26,5 +26,5 @@ func (m *MemStorage) UpdateGauge(name string, value float64) {
 func (m *MemStorage) UpdateCounter(name string, value int64) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	m.counters[name] = value
+	m.counters[name] += value
 }
