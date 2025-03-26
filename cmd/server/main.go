@@ -1,19 +1,20 @@
 package main
 
 import (
-	"github.com/zubans/metrics/internal/handler"
-	"github.com/zubans/metrics/internal/storage"
+	"github.com/zubans/metrics/cmd/server/internal/handler"
+	"github.com/zubans/metrics/cmd/server/internal/storage"
 	"log"
 	"net/http"
 )
 
 func main() {
-	memStorage := storage.NewMemStorage()
+	var memStorage = storage.NewMemStorage()
 	memHandler := handler.NewHandler(memStorage)
 
 	log.Println("Starting server")
 
-	err := http.ListenAndServe(":8080", memHandler.Router())
+	r := getRouter(memHandler)
+	err := http.ListenAndServe(":8080", r)
 	if err != nil {
 		log.Fatal(err)
 	}
