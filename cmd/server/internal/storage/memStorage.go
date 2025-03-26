@@ -28,3 +28,17 @@ func (m *MemStorage) UpdateCounter(name string, value int64) {
 	defer m.mutex.Unlock()
 	m.counters[name] += value
 }
+
+func (m *MemStorage) GetGauge(name string) (float64, bool) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	value, exists := m.gauges[name]
+	return value, exists
+}
+
+func (m *MemStorage) GetCounter(name string) (int64, bool) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	value, exists := m.counters[name]
+	return value, exists
+}

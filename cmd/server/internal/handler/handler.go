@@ -2,7 +2,7 @@ package handler
 
 import (
 	"fmt"
-	"github.com/zubans/metrics/internal/storage"
+	"github.com/zubans/metrics/cmd/server/internal/storage"
 	"net/http"
 	"strconv"
 

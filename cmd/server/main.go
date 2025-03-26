@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/zubans/metrics/internal/handler"
-	"github.com/zubans/metrics/internal/storage"
+	"github.com/zubans/metrics/cmd/server/internal/handler"
+	"github.com/zubans/metrics/cmd/server/internal/storage"
 	"log"
 	"net/http"
 )
