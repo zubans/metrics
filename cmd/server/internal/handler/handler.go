@@ -49,7 +49,7 @@ func (h *Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
 	fmt.Printf("metric updated")
 }
 
@@ -74,7 +74,7 @@ func (h *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
 	} else if metricType == "gauge" {
 		value, found := h.storage.GetGauge(metricName)
 		if found {
-			res = strconv.FormatFloat(value, 'f', 1, 64)
+			res = strconv.FormatFloat(value, 'f', -1, 64)
 		} else {
 			http.Error(w, "Gauge not found", http.StatusNotFound)
 			return

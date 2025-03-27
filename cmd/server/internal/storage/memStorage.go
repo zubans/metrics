@@ -80,7 +80,7 @@ func (m *MemStorage) ShowMetrics() string {
 
 	for _, k := range keys {
 		v := m.gauges[k]
-		result += "<tr><td>" + k + "</td><td>" + strconv.FormatFloat(v, 'f', 2, 64) + "</td></tr>"
+		result += "<tr><td>" + k + "</td><td>" + strconv.FormatFloat(v, 'f', -1, 64) + "</td></tr>"
 	}
 
 	result += "</table> </span>"
