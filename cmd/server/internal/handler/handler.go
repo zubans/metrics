@@ -18,12 +18,6 @@ func NewHandler(s storage.MetricStorage) *Handler {
 	return &Handler{storage: s}
 }
 
-//func (h *Handler) Router() http.Handler {
-//	r := chi.NewRouter()
-//	r.Post("/update/{type}/{name}/{value}", h.UpdateMetric)
-//	return r
-//}
-
 func (h *Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "type")
 	metricName := chi.URLParam(r, "name")
