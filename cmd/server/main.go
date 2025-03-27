@@ -8,12 +8,13 @@ import (
 )
 
 func main() {
-	memStorage := storage.NewMemStorage()
+	var memStorage = storage.NewMemStorage()
 	memHandler := handler.NewHandler(memStorage)
 
 	log.Println("Starting server")
 
-	err := http.ListenAndServe(":8080", memHandler.Router())
+	r := getRouter(memHandler)
+	err := http.ListenAndServe(":8080", r)
 	if err != nil {
 		log.Fatal(err)
 	}
