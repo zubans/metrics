@@ -26,9 +26,9 @@ func TestHandler_UpdateMetric(t *testing.T) {
 			name:               "Valid Gauge Metric",
 			metricType:         "gauge",
 			metricName:         "cpu_usage",
-			metricValue:        "50.5",
+			metricValue:        "50.567",
 			expectedStatusCode: http.StatusOK,
-			expectedGauge:      50.5,
+			expectedGauge:      50.567,
 			expectedCounter:    0,
 		},
 		{
