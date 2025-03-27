@@ -30,7 +30,7 @@ func (h *Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 
 	switch metricType {
 	case "gauge":
-		value, err := strconv.ParseFloat(metricValue, 32)
+		value, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
 			http.Error(w, "invlid gauge value", http.StatusBadRequest)
 			return
