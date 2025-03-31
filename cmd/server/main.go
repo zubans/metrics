@@ -17,7 +17,7 @@ func main() {
 
 	r := getRouter(memHandler)
 
-	flag.StringVar(&flagRunAddr, "a", ":8080", "address and port to run server")
+	flag.StringVar(&flagRunAddr, "a", "localhost:8080", "address and port to run server")
 	flag.Parse()
 
 	log.Println(fmt.Printf("Starting server on %s", flagRunAddr))
