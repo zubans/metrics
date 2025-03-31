@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zubans/metrics/cmd/agent/internal/config"
 	"github.com/zubans/metrics/cmd/agent/internal/helpers"
 	"github.com/zubans/metrics/cmd/agent/internal/models"
 	"github.com/zubans/metrics/cmd/agent/internal/services"
@@ -36,7 +37,10 @@ func TestMetricsController_SendMetrics(t *testing.T) {
 			},
 			postError: nil,
 			url: func(metric models.Metric) string {
-				return helpers.ToURL(metric)
+				cfg := config.Config{
+					AddressServer: "localhost:8080",
+				}
+				return helpers.ToURL(metric, cfg)
 			},
 		},
 		{
@@ -49,7 +53,10 @@ func TestMetricsController_SendMetrics(t *testing.T) {
 			},
 			postError: fmt.Errorf("error sending metric"),
 			url: func(metric models.Metric) string {
-				return helpers.ToURL(metric)
+				cfg := config.Config{
+					AddressServer: "localhost:8080",
+				}
+				return helpers.ToURL(metric, cfg)
 			},
 		},
 	}

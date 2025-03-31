@@ -2,18 +2,27 @@ package controllers
 
 import (
 	"fmt"
+	"github.com/zubans/metrics/cmd/agent/internal/config"
 	"github.com/zubans/metrics/cmd/agent/internal/helpers"
 	"github.com/zubans/metrics/cmd/agent/internal/services"
 	"net/http"
 )
 
-type MetricsController struct {
-	metricsService *services.MetricsService
+type MetricControllerer interface {
+	NewMetricsController(metricsService *services.MetricsService) *MetricsController
+	UpdateMetrics()
+	SendMetrics()
 }
 
-func NewMetricsController(metricsService *services.MetricsService) *MetricsController {
+type MetricsController struct {
+	metricsService *services.MetricsService
+	cfg            config.Config
+}
+
+func NewMetricsController(metricsService *services.MetricsService, cfg config.Config) *MetricsController {
 	return &MetricsController{
 		metricsService: metricsService,
+		cfg:            cfg,
 	}
 }
 
@@ -25,7 +34,7 @@ func (mc *MetricsController) SendMetrics() {
 	metrics := mc.metricsService.GetMetrics()
 
 	for _, metric := range metrics.MetricList {
-		url := helpers.ToURL(metric)
+		url := helpers.ToURL(metric, mc.cfg)
 
 		resp, err := http.Post(url, "text/plain", nil)
 		if err != nil {
