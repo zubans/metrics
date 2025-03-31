@@ -7,6 +7,12 @@ import (
 	"net/http"
 )
 
+type MetricControllerer interface {
+	NewMetricsController(metricsService *services.MetricsService) *MetricsController
+	UpdateMetrics()
+	SendMetrics()
+}
+
 type MetricsController struct {
 	metricsService *services.MetricsService
 }

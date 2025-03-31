@@ -6,6 +6,11 @@ import (
 	"runtime"
 )
 
+type MetricsCollector interface {
+	CollectMetrics()
+	GetMetrics() *models.Metrics
+}
+
 type MetricsService struct {
 	metrics *models.Metrics
 }
