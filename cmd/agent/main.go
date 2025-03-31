@@ -2,13 +2,12 @@ package main
 
 import (
 	"flag"
+	"github.com/zubans/metrics/cmd/agent/internal/config"
 	"github.com/zubans/metrics/cmd/agent/internal/controllers"
 	"github.com/zubans/metrics/cmd/agent/internal/services"
 	"log"
 	"time"
 )
-
-var a string
 
 func main() {
 	metricsService := services.NewMetricsService()
@@ -17,8 +16,9 @@ func main() {
 
 	var repInt int
 	var pollInt int
+	var addr string
 
-	flag.StringVar(&a, "a", "localhost:8080", "address and port to run server")
+	flag.StringVar(&addr, "a", "localhost:8080", "address and port to run server")
 
 	flag.IntVar(&repInt, "r", 10, "report send interval")
 	flag.IntVar(&pollInt, "p", 2, "poll interval")
@@ -26,11 +26,17 @@ func main() {
 
 	defer log.Println("stopped")
 
+	cfg := config.Config{
+		AddressServer: addr,
+		SendInterval:  time.Duration(repInt) * time.Second,
+		PollInterval:  time.Duration(pollInt) * time.Second,
+	}
+
 	go func() {
 		for {
 			metricsController.UpdateMetrics()
 
-			time.Sleep(time.Duration(pollInt) * time.Second)
+			time.Sleep(cfg.PollInterval)
 		}
 	}()
 
@@ -38,7 +44,7 @@ func main() {
 		for {
 			metricsController.SendMetrics()
 
-			time.Sleep(time.Duration(repInt) * time.Second)
+			time.Sleep(cfg.SendInterval)
 		}
 	}()
 
