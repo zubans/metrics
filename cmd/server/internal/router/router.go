@@ -1,4 +1,4 @@
-package main
+package router
 
 import (
 	"github.com/go-chi/chi/v5"
@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func getRouter(h *handler.Handler) http.Handler {
+func GetRouter(h *handler.Handler) http.Handler {
 	r := chi.NewRouter()
 
 	r.Get("/", h.ShowMetrics)
