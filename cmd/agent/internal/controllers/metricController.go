@@ -19,9 +19,10 @@ type MetricsController struct {
 	cfg            config.Config
 }
 
-func NewMetricsController(metricsService *services.MetricsService) *MetricsController {
+func NewMetricsController(metricsService *services.MetricsService, cfg config.Config) *MetricsController {
 	return &MetricsController{
 		metricsService: metricsService,
+		cfg:            cfg,
 	}
 }
 

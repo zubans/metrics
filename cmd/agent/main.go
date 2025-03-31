@@ -6,13 +6,15 @@ import (
 	"github.com/zubans/metrics/cmd/agent/internal/controllers"
 	"github.com/zubans/metrics/cmd/agent/internal/services"
 	"log"
+	"os"
+	"strconv"
 	"time"
 )
 
 func main() {
 	metricsService := services.NewMetricsService()
 
-	metricsController := controllers.NewMetricsController(metricsService)
+	//metricsController := controllers.NewMetricsController(metricsService)
 
 	var repInt int
 	var pollInt int
@@ -26,11 +28,28 @@ func main() {
 
 	defer log.Println("stopped")
 
+	if envRunAddr := os.Getenv("ADDRESS"); envRunAddr != "" {
+		addr = envRunAddr
+	}
+
+	if r := os.Getenv("REPORT_INTERVAL"); r != "" {
+		repInt, _ = strconv.Atoi(r)
+	}
+
+	if p := os.Getenv("POLL_INTERVAL"); p != "" {
+		pollInt, _ = strconv.Atoi(p)
+	}
+
 	cfg := config.Config{
 		AddressServer: addr,
 		SendInterval:  time.Duration(repInt) * time.Second,
 		PollInterval:  time.Duration(pollInt) * time.Second,
 	}
+
+	log.Printf("Server started at %s", cfg.AddressServer)
+	log.Printf("Send interval: %v, Poll interval: %v", cfg.SendInterval, cfg.PollInterval)
+
+	metricsController := controllers.NewMetricsController(metricsService, cfg)
 
 	go func() {
 		for {
