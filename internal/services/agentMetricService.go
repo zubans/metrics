@@ -1,7 +1,8 @@
 package services
 
 import (
-	"github.com/zubans/metrics/cmd/agent/internal/models"
+	"github.com/zubans/metrics/internal/config"
+	"github.com/zubans/metrics/internal/models"
 	"math/rand"
 	"runtime"
 )
@@ -13,11 +14,13 @@ type MetricsCollector interface {
 
 type MetricsService struct {
 	metrics *models.Metrics
+	Cfg     *config.AgentConfig
 }
 
-func NewMetricsService() *MetricsService {
+func NewMetricsService(cfg *config.AgentConfig) *MetricsService {
 	return &MetricsService{
 		metrics: &models.Metrics{},
+		Cfg:     cfg,
 	}
 }
 

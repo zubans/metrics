@@ -2,9 +2,9 @@ package controllers
 
 import (
 	"fmt"
-	"github.com/zubans/metrics/cmd/agent/internal/config"
-	"github.com/zubans/metrics/cmd/agent/internal/helpers"
-	"github.com/zubans/metrics/cmd/agent/internal/services"
+	"github.com/zubans/metrics/internal/config"
+	"github.com/zubans/metrics/internal/models"
+	"github.com/zubans/metrics/internal/services"
 	"net/http"
 )
 
@@ -16,13 +16,11 @@ type MetricControllerer interface {
 
 type MetricsController struct {
 	metricsService *services.MetricsService
-	cfg            config.Config
 }
 
-func NewMetricsController(metricsService *services.MetricsService, cfg config.Config) *MetricsController {
+func NewMetricsController(metricsService *services.MetricsService) *MetricsController {
 	return &MetricsController{
 		metricsService: metricsService,
-		cfg:            cfg,
 	}
 }
 
@@ -34,7 +32,7 @@ func (mc *MetricsController) SendMetrics() {
 	metrics := mc.metricsService.GetMetrics()
 
 	for _, metric := range metrics.MetricList {
-		url := helpers.ToURL(metric, mc.cfg)
+		url := ToURL(metric, mc.metricsService.Cfg)
 
 		resp, err := http.Post(url, "text/plain", nil)
 		if err != nil {
@@ -49,4 +47,9 @@ func (mc *MetricsController) SendMetrics() {
 			fmt.Printf("Failed to send metric: %s, status code: %d\n", metric.Name, resp.StatusCode)
 		}
 	}
+}
+
+func ToURL(m models.Metric, cfg *config.AgentConfig) string {
+
+	return fmt.Sprintf("http://%s/update/%s/%s/%d", cfg.AddressServer, m.Type, m.Name, m.Value)
 }

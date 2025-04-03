@@ -1,28 +1,27 @@
 package main
 
 import (
-	"flag"
 	"fmt"
-	"github.com/zubans/metrics/cmd/server/internal/handler"
-	"github.com/zubans/metrics/cmd/server/internal/router"
-	"github.com/zubans/metrics/cmd/server/internal/storage"
+	"github.com/zubans/metrics/internal/config"
+	"github.com/zubans/metrics/internal/handler"
+	"github.com/zubans/metrics/internal/router"
+	"github.com/zubans/metrics/internal/services"
+	"github.com/zubans/metrics/internal/storage"
 	"log"
 	"net/http"
 )
 
-var flagRunAddr string
-
 func main() {
+	cfg := config.NewServerConfig()
+
 	var memStorage = storage.NewMemStorage()
-	memHandler := handler.NewHandler(memStorage)
+	var serv = services.NewMetricService(memStorage)
+	memHandler := handler.NewHandler(serv)
 
 	r := router.GetRouter(memHandler)
 
-	flag.StringVar(&flagRunAddr, "a", "localhost:8080", "address and port to run server")
-	flag.Parse()
-
-	log.Println(fmt.Printf("Starting server on %s", flagRunAddr))
-	err := http.ListenAndServe(flagRunAddr, r)
+	log.Println(fmt.Printf("Starting server on %s \n", cfg.RunAddr))
+	err := http.ListenAndServe(cfg.RunAddr, r)
 	if err != nil {
 		log.Fatal(err)
 	}

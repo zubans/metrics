@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zubans/metrics/cmd/agent/internal/config"
-	"github.com/zubans/metrics/cmd/agent/internal/helpers"
-	"github.com/zubans/metrics/cmd/agent/internal/models"
-	"github.com/zubans/metrics/cmd/agent/internal/services"
+	"github.com/zubans/metrics/internal/config"
+	"github.com/zubans/metrics/internal/models"
+	"github.com/zubans/metrics/internal/services"
 	"io"
 	"net/http"
 	"testing"
@@ -17,6 +16,7 @@ import (
 var httpPost = http.Post
 
 func TestMetricsController_SendMetrics(t *testing.T) {
+	cfg := config.NewAgentConfig()
 	type fields struct {
 		metricsService *services.MetricsService
 	}
@@ -30,33 +30,31 @@ func TestMetricsController_SendMetrics(t *testing.T) {
 		{
 			name: "success",
 			fields: fields{
-				metricsService: services.NewMetricsService(),
+				metricsService: services.NewMetricsService(cfg),
 			},
 			response: &http.Response{
 				StatusCode: http.StatusOK,
 			},
 			postError: nil,
 			url: func(metric models.Metric) string {
-				cfg := config.Config{
-					AddressServer: "localhost:8080",
-				}
-				return helpers.ToURL(metric, cfg)
+
+				return ToURL(metric, cfg)
 			},
 		},
 		{
 			name: "error",
 			fields: fields{
-				metricsService: services.NewMetricsService(),
+				metricsService: services.NewMetricsService(cfg),
 			},
 			response: &http.Response{
 				StatusCode: http.StatusInternalServerError,
 			},
 			postError: fmt.Errorf("error sending metric"),
 			url: func(metric models.Metric) string {
-				cfg := config.Config{
+				cfg := &config.AgentConfig{
 					AddressServer: "localhost:8080",
 				}
-				return helpers.ToURL(metric, cfg)
+				return ToURL(metric, cfg)
 			},
 		},
 	}

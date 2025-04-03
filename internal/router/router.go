@@ -2,7 +2,7 @@ package router
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/zubans/metrics/cmd/server/internal/handler"
+	"github.com/zubans/metrics/internal/handler"
 	"net/http"
 )
 

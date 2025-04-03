@@ -3,7 +3,8 @@ package handler
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
-	"github.com/zubans/metrics/cmd/server/internal/storage"
+	"github.com/zubans/metrics/internal/services"
+	"github.com/zubans/metrics/internal/storage"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,7 +12,8 @@ import (
 
 func TestHandler_UpdateMetric(t *testing.T) {
 	newMemStorage := storage.NewMemStorage()
-	handler := NewHandler(newMemStorage)
+	newService := services.NewMetricService(newMemStorage)
+	handler := NewHandler(newService)
 
 	tests := []struct {
 		name               string
