@@ -15,7 +15,7 @@ func main() {
 
 	defer log.Println("stopped")
 
-	log.Printf("Agent send to address %s", cfg.AddressServer)
+	log.Printf("Agent send to server address %s", cfg.AddressServer)
 	log.Printf("Send interval: %v, Poll interval: %v", cfg.SendInterval, cfg.PollInterval)
 
 	metricsController := controllers.NewMetricsController(metricsService)
