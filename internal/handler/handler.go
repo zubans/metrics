@@ -50,7 +50,6 @@ func (h *Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	fmt.Printf("metric updated")
 }
 
 func (h *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
