@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: cmd/server/Dockerfile  # Путь к Dockerfile для server
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+      - air-bin:/root/go/bin
+    working_dir: /app
+    command: air -c .air.server.toml
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"
+    env_file:
+      - .env
+    environment:
+      - CGO_ENABLED=0
+      - GO111MODULE=on
+    networks:
+      - metrics-network
+
+  agent:
+    build:
+      context: .
+      dockerfile: cmd/agent/Dockerfile  # Путь к Dockerfile для agent
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+      - air-bin:/root/go/bin
+    working_dir: /app
+    command: air -c .air.agent.toml
+    ports:
+      - "${AGENT_PORT}:${AGENT_PORT}"
+    env_file:
+      - .env
+    environment:
+      - CGO_ENABLED=0
+      - GO111MODULE=on
+    networks:
+      - metrics-network
+
+volumes:
+  air-bin:
+
+networks:
+  metrics-network:
+    driver: bridge
