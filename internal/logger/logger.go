@@ -77,7 +77,6 @@ func RequestLogger(h http.Handler) http.Handler {
 				Log.Error("failed to read request body", zap.Error(err))
 			} else {
 				bodyString = string(bodyBytes)
-				// Восстанавливаем тело запроса
 				r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 			}
 		}
