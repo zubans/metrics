@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 	"log"
 	"net/http"
+	"strings"
 )
 
 var cfg = config.NewServerConfig()
@@ -21,7 +22,11 @@ func run(h http.Handler) error {
 
 	logger.Log.Info("Starting server on ", zap.String("address", cfg.RunAddr))
 
-	return http.ListenAndServe(cfg.RunAddr, h)
+	return http.ListenAndServe(cfg.RunAddr, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.URL.Path = strings.TrimSuffix(r.URL.Path, "//")
+		r.URL.Path = strings.TrimSuffix(r.URL.Path, "/")
+		h.ServeHTTP(w, r)
+	}))
 }
 
 func main() {
