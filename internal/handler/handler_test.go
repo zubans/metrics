@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/zubans/metrics/internal/services"
@@ -9,6 +10,54 @@ import (
 	"net/http/httptest"
 	"testing"
 )
+
+func TestHandler_UpdateMetricJSON(t *testing.T) {
+	newMemStorage := storage.NewMemStorage()
+	newService := services.NewMetricService(newMemStorage)
+	handler := NewHandler(newService)
+	tests := []struct {
+		name               string
+		request_data       string
+		expectedStatusCode int
+	}{
+		{
+			name:               "Valid Counter Metric",
+			request_data:       `{  "id": "PollCount",  "type": "counter",  "delta": 1}`,
+			expectedStatusCode: http.StatusOK,
+		},
+		{
+			name:               "Valid Gauge Metric",
+			request_data:       `{  "id": "Alloc",  "type": "gauge",  "value": 1}`,
+			expectedStatusCode: http.StatusOK,
+		},
+		{
+			name:               "Invalid Gauge Metric - bad value type",
+			request_data:       `{  "id": "Alloc",  "type": "gauge",  "value": "1""}`,
+			expectedStatusCode: http.StatusBadRequest,
+		},
+		{
+			name:               "Invalid Gauge Metric - unsupported type",
+			request_data:       `{  "id": "Alloc",  "type": "unsupported",  "value": 1"}`,
+			expectedStatusCode: http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequest("POST", "/update/", bytes.NewBufferString(tt.request_data))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			req.Header.Set("Content-Type", "application/json")
+			rr := httptest.NewRecorder()
+			h := http.HandlerFunc(handler.UpdateMetricJSON)
+			h.ServeHTTP(rr, req)
+
+			assert.Equal(t, tt.expectedStatusCode, rr.Code)
+		})
+	}
+}
 
 func TestHandler_UpdateMetric(t *testing.T) {
 	newMemStorage := storage.NewMemStorage()

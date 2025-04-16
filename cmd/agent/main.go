@@ -31,6 +31,7 @@ func main() {
 	go func() {
 		for {
 			metricsController.SendMetrics()
+			metricsController.JsonSendMetrics()
 
 			time.Sleep(cfg.SendInterval)
 		}

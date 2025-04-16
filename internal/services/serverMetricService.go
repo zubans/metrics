@@ -1,9 +1,11 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/go-playground/validator/v10"
 	"github.com/zubans/metrics/internal/errdefs"
+	"github.com/zubans/metrics/internal/models"
 	"sort"
 	"strconv"
 )
@@ -92,7 +94,7 @@ func NewMetricService(storage MetricStorage) *Storage {
 	return &Storage{storage: storage}
 }
 
-func (s Storage) GetMetrics(mData *MetricData) (string, *errdefs.CustomError) {
+func (s Storage) GetMetric(mData *MetricData) (string, *errdefs.CustomError) {
 	if mData.Type == "counter" {
 		value, found := s.storage.GetCounter(mData.Name)
 		if found {
@@ -112,7 +114,37 @@ func (s Storage) GetMetrics(mData *MetricData) (string, *errdefs.CustomError) {
 	}
 }
 
-func (s Storage) UpdateGauges(mData *MetricData) (*errdefs.CustomError, error) {
+func (s Storage) GetJSONMetric(jsonData *models.MetricsDTO) ([]byte, *errdefs.CustomError) {
+	if jsonData.MType == string(models.Counter) {
+		value, found := s.storage.GetCounter(jsonData.ID)
+		if found {
+			jsonData.Delta = &value
+			res, err := json.Marshal(jsonData)
+			if err != nil {
+				return nil, errdefs.NewBadRequestError("can't marshal json data")
+			}
+			return res, nil
+		} else {
+			return nil, errdefs.NewNotFoundError("metric name required")
+		}
+	} else if jsonData.MType == string(models.Gauge) {
+		value, found := s.storage.GetGauge(jsonData.ID)
+		if found {
+			jsonData.Value = &value
+			res, err := json.Marshal(jsonData)
+			if err != nil {
+				return nil, errdefs.NewBadRequestError("can't marshal json data")
+			}
+			return res, nil
+		} else {
+			return nil, errdefs.NewNotFoundError("metric name required")
+		}
+	} else {
+		return nil, errdefs.NewBadRequestError("Invalid metric type")
+	}
+}
+
+func (s Storage) UpdateMetric(mData *MetricData) (*errdefs.CustomError, error) {
 	if mData.Name == "" {
 		return errdefs.NewNotFoundError("metric name required"), fmt.Errorf("metric name required")
 	}
