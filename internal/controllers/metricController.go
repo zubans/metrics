@@ -63,12 +63,15 @@ func (mc *MetricsController) JSONSendMetrics() {
 			fmt.Printf("Error sending metric %s: %v\n", metric.ID, err)
 			continue
 		}
-		defer resp.Body.Close()
 
-		if resp.StatusCode == http.StatusOK {
-			fmt.Printf("Successfully sent metric: %s\n", metric.ID)
-		} else {
-			fmt.Printf("Failed to send metric: %s, status code: %d\n", metric.ID, resp.StatusCode)
-		}
+		func() {
+			defer resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				fmt.Printf("Successfully sent metric: %s\n", metric.ID)
+			} else {
+				fmt.Printf("Failed to send metric: %s, status code: %d\n", metric.ID, resp.StatusCode)
+			}
+		}()
+
 	}
 }
