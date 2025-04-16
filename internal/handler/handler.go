@@ -152,7 +152,7 @@ func (h *Handler) GetJSONMetric(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "text/plain")
 
-	_, err = io.WriteString(w, string(res))
+	_, err = w.Write(res)
 	if err != nil {
 		return
 	}

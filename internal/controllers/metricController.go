@@ -49,7 +49,7 @@ func (mc *MetricsController) SendMetrics() {
 	}
 }
 
-func (mc *MetricsController) JsonSendMetrics() {
+func (mc *MetricsController) JSONSendMetrics() {
 	metrics := mc.metricsService.GetMetrics()
 	dtoMetrics := models.ConvertMetricsListToDTO(metrics.MetricList)
 

@@ -48,7 +48,7 @@ func TestMetricsController_JsonSendMetrics(t *testing.T) {
 			m := MetricsController{
 				metricsService: tt.fields.metricsService,
 			}
-			m.JsonSendMetrics()
+			m.JSONSendMetrics()
 		})
 	}
 }
