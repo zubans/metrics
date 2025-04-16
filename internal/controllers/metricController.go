@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"github.com/zubans/metrics/internal/models"
 	"github.com/zubans/metrics/internal/services"
+	"io"
+	"log"
 	"net/http"
 )
 
@@ -60,7 +62,7 @@ func (mc *MetricsController) JSONSendMetrics() {
 
 		resp, err := http.Post(url, "application/json", bytes.NewBuffer(b))
 		if err != nil {
-			fmt.Printf("Error sending metric %s: %v\n", metric.ID, err)
+			log.Printf("Error sending metric %s: %v. BODY: %v\n", metric.ID, err, metric)
 			continue
 		}
 
