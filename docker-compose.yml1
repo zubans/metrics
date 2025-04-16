@@ -18,7 +18,7 @@ services:
     environment:
       - CGO_ENABLED=0
       - GO111MODULE=on
-      - ADDRESS=localhost:8083
+      - ADDRESS=localhost:8080
 
     networks:
       - metrics-network
@@ -40,7 +40,7 @@ services:
     env_file:
       - .env
     environment:
-      - ADDRESS=localhost:8083
+      - ADDRESS=localhost:8080
       - CGO_ENABLED=0
       - GO111MODULE=on
     networks:

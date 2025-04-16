@@ -17,6 +17,12 @@ Content-Type: application/json
 "type": "counter"
 }
 
+### Send POST request for get metric
+POST http://localhost:8083/value/
+Content-Type: application/json
+
+{"id":"GetSet23","type":"counter"}
+
 <> 2025-04-16T120540.200.txt
 
 ### SEND POST ITER2
