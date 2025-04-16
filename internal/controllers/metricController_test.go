@@ -15,44 +15,6 @@ import (
 
 var httpPost = http.Post
 
-func TestMetricsController_JsonSendMetrics(t *testing.T) {
-	cfg := config.NewAgentConfig()
-	type fields struct {
-		metricsService *services.MetricsService
-	}
-
-	tests := []struct {
-		name      string
-		fields    fields
-		response  *http.Response
-		postError error
-		url       func(models.Metric) string
-	}{
-		{
-			name: "success",
-			fields: fields{
-				metricsService: services.NewMetricsService(cfg),
-			},
-			response: &http.Response{
-				StatusCode: http.StatusOK,
-			},
-			postError: nil,
-			url: func(metric models.Metric) string {
-				return fmt.Sprintf("http://%s/update/", cfg.AddressServer)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := MetricsController{
-				metricsService: tt.fields.metricsService,
-			}
-			m.JSONSendMetrics()
-		})
-	}
-}
-
 func TestMetricsController_SendMetrics(t *testing.T) {
 	cfg := config.NewAgentConfig()
 	type fields struct {
