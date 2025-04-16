@@ -156,6 +156,8 @@ func (h *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 				zap.String("message", CustomErr.Message),
 				zap.Int("status_code", CustomErr.Code),
 				zap.Any("body", m),
+				zap.Any("raw", err),
+				zap.Any("request", r),
 			)
 			return
 		}
