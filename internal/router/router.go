@@ -10,7 +10,7 @@ func GetRouter(h *handler.Handler) http.Handler {
 	r := chi.NewRouter()
 
 	r.Get("/", h.ShowMetrics)
-	r.Post("/value/", h.GetJSONMetric)
+	r.Post("/value/", h.GetMetricJSON)
 	r.Post("/update/{type}/{name}/{value}", h.UpdateMetric)
 	r.Post("/update/", h.UpdateMetricJSON)
 	r.Route("/value/{type}", func(r chi.Router) {

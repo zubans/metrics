@@ -90,6 +90,7 @@ func (h *Handler) UpdateMetricJSON(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -126,7 +127,7 @@ func (h *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) GetJSONMetric(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 	var m *models.MetricsDTO
 
 	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
