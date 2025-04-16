@@ -18,7 +18,9 @@ func GetRouter(h *handler.Handler) http.Handler {
 		})
 	})
 	r.Post("/update/", h.UpdateMetricJSON)
+	r.Post("/update", h.UpdateMetricJSON)
 	r.Post("/value/", h.GetMetricJSON)
+	r.Post("/value", h.GetMetricJSON)
 
 	return r
 }
