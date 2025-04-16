@@ -32,6 +32,8 @@ func run(metricsController *controllers.MetricsController, cfg *config.AgentConf
 		for {
 			metricsController.UpdateMetrics()
 			time.Sleep(cfg.PollInterval)
+			log.Printf("updated %s", cfg.PollInterval)
+
 		}
 	}()
 
@@ -39,6 +41,7 @@ func run(metricsController *controllers.MetricsController, cfg *config.AgentConf
 
 	go func() {
 		for {
+			log.Printf("sended %s", cfg.SendInterval)
 			metricsController.JSONSendMetrics()
 			time.Sleep(cfg.SendInterval)
 			//metricsController.SendMetrics()
