@@ -25,6 +25,7 @@ func run(h http.Handler) error {
 }
 
 func main() {
+	log.Printf("here strat %v", "server")
 	var memStorage = storage.NewMemStorage()
 	var serv = services.NewMetricService(memStorage)
 	memHandler := handler.NewHandler(serv)
