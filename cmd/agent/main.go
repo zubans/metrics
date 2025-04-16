@@ -20,19 +20,23 @@ func main() {
 
 	metricsController := controllers.NewMetricsController(metricsService)
 
+	metricsController.UpdateMetrics()
+	time.Sleep(cfg.SendInterval)
+	metricsController.JSONSendMetrics()
+
+	go func() {
+		for {
+			metricsController.UpdateMetrics()
+			time.Sleep(cfg.PollInterval)
+		}
+	}()
+
 	go func() {
 		for {
 			time.Sleep(cfg.SendInterval)
 			metricsController.JSONSendMetrics()
 			//metricsController.SendMetrics()
 
-		}
-	}()
-
-	go func() {
-		for {
-			metricsController.UpdateMetrics()
-			time.Sleep(cfg.PollInterval)
 		}
 	}()
 
