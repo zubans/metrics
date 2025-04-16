@@ -51,7 +51,7 @@ func (h *Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
+	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 }
 
