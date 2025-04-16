@@ -22,17 +22,17 @@ func main() {
 
 	go func() {
 		for {
-			metricsController.UpdateMetrics()
-			time.Sleep(cfg.PollInterval)
+			time.Sleep(cfg.SendInterval)
+			metricsController.JSONSendMetrics()
+			//metricsController.SendMetrics()
+
 		}
 	}()
 
 	go func() {
 		for {
-			time.Sleep(cfg.SendInterval)
-			metricsController.JSONSendMetrics()
-			//metricsController.SendMetrics()
-
+			metricsController.UpdateMetrics()
+			time.Sleep(cfg.PollInterval)
 		}
 	}()
 
