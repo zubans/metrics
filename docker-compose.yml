@@ -18,13 +18,17 @@ services:
     environment:
       - CGO_ENABLED=0
       - GO111MODULE=on
+      - ADDRESS=localhost:8083
+
     networks:
       - metrics-network
 
   agent:
+    depends_on:
+      - server
     build:
       context: .
-      dockerfile: cmd/agent/Dockerfile  # Путь к Dockerfile для agent
+      dockerfile: cmd/agent/Dockerfile
     volumes:
       - .:/app
       - ./logs:/app/logs
@@ -36,6 +40,7 @@ services:
     env_file:
       - .env
     environment:
+      - ADDRESS=localhost:8083
       - CGO_ENABLED=0
       - GO111MODULE=on
     networks:
