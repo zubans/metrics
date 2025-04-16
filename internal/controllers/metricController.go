@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/zubans/metrics/internal/models"
 	"github.com/zubans/metrics/internal/services"
-	"io"
 	"log"
 	"net/http"
 )
