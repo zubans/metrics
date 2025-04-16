@@ -35,12 +35,13 @@ func run(metricsController *controllers.MetricsController, cfg *config.AgentConf
 		}
 	}()
 
+	time.Sleep(cfg.SendInterval)
+
 	go func() {
 		for {
-			time.Sleep(cfg.SendInterval)
 			metricsController.JSONSendMetrics()
+			time.Sleep(cfg.SendInterval)
 			//metricsController.SendMetrics()
-
 		}
 	}()
 }
