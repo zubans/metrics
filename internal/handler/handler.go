@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/zubans/metrics/internal/errdefs"
+	"github.com/zubans/metrics/internal/logger"
 	"github.com/zubans/metrics/internal/models"
 	"github.com/zubans/metrics/internal/services"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"strconv"
@@ -47,7 +49,10 @@ func (h *Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 		var CustomErr *errdefs.CustomError
 		if errors.As(details, &CustomErr) {
 			http.Error(w, CustomErr.Message, CustomErr.Code)
-			fmt.Printf("custom error: %s\n", CustomErr.Error())
+			logger.Log.Error("custom error",
+				zap.String("message", CustomErr.Message),
+				zap.Int("status_code", CustomErr.Code),
+			)
 			return
 		}
 	}
@@ -84,8 +89,10 @@ func (h *Handler) UpdateMetricJSON(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var CustomErr *errdefs.CustomError
 		if errors.As(details, &CustomErr) {
-			http.Error(w, CustomErr.Message, CustomErr.Code)
-			fmt.Printf("custom error: %s\n", CustomErr.Error())
+			logger.Log.Error("custom error",
+				zap.String("message", CustomErr.Message),
+				zap.Int("status_code", CustomErr.Code),
+			)
 			return
 		}
 	}
@@ -145,7 +152,10 @@ func (h *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 	if err.(*errdefs.CustomError) != nil {
 		if errors.As(err, &CustomErr) {
 			http.Error(w, CustomErr.Message, CustomErr.Code)
-			fmt.Printf("custom error: %s\n", CustomErr.Error())
+			logger.Log.Error("custom error",
+				zap.String("message", CustomErr.Message),
+				zap.Int("status_code", CustomErr.Code),
+			)
 			return
 		}
 	}
