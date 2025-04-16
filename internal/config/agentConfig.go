@@ -20,7 +20,7 @@ func NewAgentConfig() *AgentConfig {
 	var addr string
 
 	flag.StringVar(&addr, "a", "localhost:8080", "address and port to run server")
-	flag.IntVar(&repInt, "r", 10, "report send interval")
+	flag.IntVar(&repInt, "r", 19, "report send interval")
 	flag.IntVar(&pollInt, "p", 2, "poll interval")
 	flag.Parse()
 
