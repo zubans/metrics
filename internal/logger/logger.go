@@ -79,7 +79,7 @@ func RequestLogger(h http.Handler) http.Handler {
 		h.ServeHTTP(lw, r)
 
 		duration := time.Since(start)
-		Log.Debug("got incoming HTTP request",
+		Log.Info("got incoming HTTP request",
 			zap.Any("request", RequestInfo{
 				Method: r.Method,
 				URL:    r.URL.String(),
