@@ -27,7 +27,7 @@ func run(h http.Handler) error {
 func main() {
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Log.Error("panic occurred", zap.Any("error", r))
+			logger.Log.Info("panic occurred", zap.Any("error", r))
 			log.Printf("ass error %v", r)
 
 		}

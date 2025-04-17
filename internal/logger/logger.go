@@ -74,7 +74,7 @@ func RequestLogger(h http.Handler) http.Handler {
 		if r.Method == http.MethodPost || r.Method == http.MethodPut {
 			bodyBytes, err := io.ReadAll(r.Body)
 			if err != nil {
-				Log.Error("failed to read request body", zap.Error(err))
+				Log.Info("failed to read request body", zap.Error(err))
 			} else {
 				bodyString = string(bodyBytes)
 				r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))

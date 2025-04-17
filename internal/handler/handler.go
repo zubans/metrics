@@ -49,7 +49,7 @@ func (h *Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 		var CustomErr *errdefs.CustomError
 		if errors.As(details, &CustomErr) {
 			http.Error(w, CustomErr.Message, CustomErr.Code)
-			logger.Log.Error("custom error",
+			logger.Log.Info("custom error",
 				zap.String("message", CustomErr.Message),
 				zap.Int("status_code", CustomErr.Code),
 			)
@@ -89,7 +89,7 @@ func (h *Handler) UpdateMetricJSON(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var CustomErr *errdefs.CustomError
 		if errors.As(details, &CustomErr) {
-			logger.Log.Error("custom error",
+			logger.Log.Info("custom error",
 				zap.String("message", CustomErr.Message),
 				zap.Int("status_code", CustomErr.Code),
 			)
@@ -160,10 +160,10 @@ func (h *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 				"details": m,
 			}
 			if err := json.NewEncoder(w).Encode(jsonResp); err != nil {
-				logger.Log.Error("failed to encode JSON error response", zap.Error(err))
+				logger.Log.Info("failed to encode JSON error response", zap.Error(err))
 			}
 
-			logger.Log.Error("custom error",
+			logger.Log.Info("custom error",
 				zap.String("message", CustomErr.Message),
 				zap.Int("status_code", CustomErr.Code),
 				zap.Any("body", m),
