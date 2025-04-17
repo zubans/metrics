@@ -1,8 +1,0 @@
-[build]
-cmd = "go build -o ./tmp/agent /app/cmd/agent/main.go"
-bin = "tmp/agent -a=server:8080"
-delay = 1000
-log = "logs/agent.log"
-
-[log]
-color = true
