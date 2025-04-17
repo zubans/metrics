@@ -75,13 +75,32 @@ func (h *Handler) UpdateMetricJSON(w http.ResponseWriter, r *http.Request) {
 
 	switch m.MType {
 	case string(models.Gauge):
+		if m.Value == nil {
+			writeJSONError(w, "missing gauge value", http.StatusBadRequest)
+			return
+		}
+		if m.Delta != nil {
+			writeJSONError(w, "gauge metric should not contain delta", http.StatusBadRequest)
+			return
+		}
+
 		val := strconv.FormatFloat(*m.Value, 'f', -1, 64)
 		mData.Value = &val
 	case string(models.Counter):
+		if m.Delta == nil {
+			writeJSONError(w, "missing counter delta", http.StatusBadRequest)
+			return
+		}
+		if m.Value != nil {
+			writeJSONError(w, "counter metric should not contain value", http.StatusBadRequest)
+			return
+		}
+
 		val := strconv.FormatInt(int64(*m.Delta), 10)
 		mData.Value = &val
 	default:
 		http.Error(w, "invalid input", http.StatusBadRequest)
+		return
 	}
 
 	res, details, err := h.service.UpdateMetric(mData)
@@ -194,4 +213,15 @@ func (h *Handler) ShowMetrics(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
+}
+
+func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+
+	resp := map[string]string{
+		"error": message,
+	}
+
+	_ = json.NewEncoder(w).Encode(resp)
 }

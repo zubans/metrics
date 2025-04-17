@@ -151,6 +151,10 @@ func (s Storage) UpdateMetric(mData *MetricData) (*models.MetricsDTO, *errdefs.C
 
 	switch mData.Type {
 	case "gauge":
+		if mData.Value == nil {
+			return nil, errdefs.NewBadRequestError("missing gauge value"), fmt.Errorf("missing gauge value")
+		}
+
 		value, err := ParseMetricValue(mData)
 		if err != nil {
 			return nil, errdefs.NewBadRequestError("invalid gauge value"), fmt.Errorf("invalid gauge value")
@@ -164,6 +168,10 @@ func (s Storage) UpdateMetric(mData *MetricData) (*models.MetricsDTO, *errdefs.C
 			Value: &res,
 		}, nil, nil
 	case "counter":
+		if mData.Value == nil {
+			return nil, errdefs.NewBadRequestError("missing counter delta"), fmt.Errorf("missing counter delta")
+		}
+
 		value, err := ParseMetricValue(mData)
 		if err != nil {
 			return nil, errdefs.NewBadRequestError("invalid counter metric value"), fmt.Errorf("invalid counter metric value")
