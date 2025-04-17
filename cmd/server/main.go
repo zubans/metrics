@@ -16,7 +16,7 @@ var cfg = config.NewServerConfig()
 
 func run(h http.Handler) error {
 	if err := logger.Initialize(cfg.FlagLogLevel); err != nil {
-		log.Fatalf("logger error: %v", err)
+		log.Printf("logger error: %v", err)
 	}
 
 	logger.Log.Info("Starting server on ", zap.String("address", cfg.RunAddr))
@@ -40,6 +40,6 @@ func main() {
 
 	r := router.GetRouter(memHandler)
 	if err := run(logger.RequestLogger(r)); err != nil {
-		log.Fatalf("Server failed to start: %v", err)
+		log.Printf("Server failed to start: %v", err)
 	}
 }

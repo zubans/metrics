@@ -144,29 +144,41 @@ func (s Storage) GetJSONMetric(jsonData *models.MetricsDTO) ([]byte, *errdefs.Cu
 	}
 }
 
-func (s Storage) UpdateMetric(mData *MetricData) (*errdefs.CustomError, error) {
+func (s Storage) UpdateMetric(mData *MetricData) (*models.MetricsDTO, *errdefs.CustomError, error) {
 	if mData.Name == "" {
-		return errdefs.NewNotFoundError("metric name required"), fmt.Errorf("metric name required")
+		return nil, errdefs.NewNotFoundError("metric name required"), fmt.Errorf("metric name required")
 	}
 
 	switch mData.Type {
 	case "gauge":
 		value, err := ParseMetricValue(mData)
 		if err != nil {
-			return errdefs.NewBadRequestError("invalid gauge value"), fmt.Errorf("invalid gauge value")
+			return nil, errdefs.NewBadRequestError("invalid gauge value"), fmt.Errorf("invalid gauge value")
 		}
 
 		s.storage.UpdateGauge(mData.Name, value)
+
+		return &models.MetricsDTO{
+			ID:    mData.Name,
+			MType: "gauge",
+			Value: &value,
+		}, nil, nil
 	case "counter":
 		value, err := ParseMetricValue(mData)
 		if err != nil {
-			return errdefs.NewBadRequestError("invalid counter metric value"), fmt.Errorf("invalid counter metric value")
+			return nil, errdefs.NewBadRequestError("invalid counter metric value"), fmt.Errorf("invalid counter metric value")
 		}
 
 		s.storage.UpdateCounter(mData.Name, int64(value))
+
+		return &models.MetricsDTO{
+			ID:    mData.Name,
+			MType: "counter",
+			Delta: &newVal,
+		}, nil, nil
 	default:
-		return errdefs.NewBadRequestError("invalid counter metric type"), fmt.Errorf("invalid counter metric type")
+		return nil, errdefs.NewBadRequestError("invalid counter metric type"), fmt.Errorf("invalid counter metric type")
 	}
 
-	return nil, nil
+	return nil, nil, nil
 }

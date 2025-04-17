@@ -16,7 +16,7 @@ import (
 )
 
 type ServerMetricService interface {
-	UpdateMetric(mData *services.MetricData) (*errdefs.CustomError, error)
+	UpdateMetric(mData *services.MetricData) (*models.MetricsDTO, *errdefs.CustomError, error)
 	GetMetric(mData *services.MetricData) (string, *errdefs.CustomError)
 	GetJSONMetric(jsonData *models.MetricsDTO) ([]byte, *errdefs.CustomError)
 	ShowMetrics() string

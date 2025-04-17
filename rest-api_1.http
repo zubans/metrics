@@ -1,4 +1,4 @@
-### Send POST request for update metric
+### Send POST request for update counter
 POST http://localhost:8080/update/
 Content-Type: application/json
 
@@ -7,6 +7,23 @@ Content-Type: application/json
   "type": "counter",
   "delta": 1
 }
+
+### Send POST request for update gauge
+POST http://localhost:8080/update/
+Content-Type: application/json
+
+{
+  "id": "some_gouge",
+  "type": "gauge",
+  "value": 15423.1987
+}
+
+### Send POST request for get gauge
+POST http://localhost:8080/value/
+Content-Type: application/json
+
+{"id":"some_gouge","type":"gauge"}
+
 
 ### Send POST request for get metric
 POST http://localhost:8080/value/
