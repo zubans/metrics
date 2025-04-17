@@ -8,6 +8,7 @@ import (
 	"github.com/zubans/metrics/internal/services"
 	"log"
 	"net/http"
+	"time"
 )
 
 type MetricControllerer interface {
@@ -56,10 +57,13 @@ func (mc *MetricsController) JSONSendMetrics() {
 
 	url := fmt.Sprintf("http://%s/update/", mc.metricsService.Cfg.AddressServer)
 
+	client := http.Client{
+		Timeout: 3 * time.Second,
+	}
 	for _, metric := range dtoMetrics {
 		b, _ := json.Marshal(metric)
 
-		resp, err := http.Post(url, "application/json", bytes.NewBuffer(b))
+		resp, err := client.Post(url, "application/json", bytes.NewBuffer(b))
 		if err != nil {
 			log.Printf("Error sending metric %s: %v. BODY: %v\n", metric.ID, err, metric)
 			continue

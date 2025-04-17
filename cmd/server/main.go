@@ -25,7 +25,15 @@ func run(h http.Handler) error {
 }
 
 func main() {
-	log.Printf("here strat %v", "server")
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Log.Error("panic occurred", zap.Any("error", r))
+			log.Printf("ass error %v", r)
+
+		}
+	}()
+
+	log.Printf("here start %v", "server")
 	var memStorage = storage.NewMemStorage()
 	var serv = services.NewMetricService(memStorage)
 	memHandler := handler.NewHandler(serv)

@@ -1,5 +1,5 @@
 ### Send POST request for update metric
-POST http://localhost:8083/update
+POST http://localhost:8080/update/
 Content-Type: application/json
 
 {
@@ -12,10 +12,7 @@ Content-Type: application/json
 POST http://localhost:8080/value/
 Content-Type: application/json
 
-{
-"id": "PollCount",
-"type": "counter"
-}
+{"id":"PollCount","type":"counter"}
 
 ### Send POST request for get metric
 POST http://localhost:8083/value/

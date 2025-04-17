@@ -151,7 +151,18 @@ func (h *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 
 	if err.(*errdefs.CustomError) != nil {
 		if errors.As(err, &CustomErr) {
-			http.Error(w, CustomErr.Message, CustomErr.Code)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(CustomErr.Code)
+
+			jsonResp := map[string]interface{}{
+				"error":   CustomErr.Message,
+				"code":    CustomErr.Code,
+				"details": m,
+			}
+			if err := json.NewEncoder(w).Encode(jsonResp); err != nil {
+				logger.Log.Error("failed to encode JSON error response", zap.Error(err))
+			}
+
 			logger.Log.Error("custom error",
 				zap.String("message", CustomErr.Message),
 				zap.Int("status_code", CustomErr.Code),
@@ -164,7 +175,7 @@ func (h *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Type", "application/json")
 
 	_, err = w.Write(res)
 	if err != nil {
