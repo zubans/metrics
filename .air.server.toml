@@ -1,8 +1,0 @@
-[build]
-cmd = "go build -o ./tmp/server /app/cmd/server/main.go"
-bin = "tmp/server -a=server:8080"
-delay = 1000
-log = "logs/server.log"
-
-[log]
-color = true

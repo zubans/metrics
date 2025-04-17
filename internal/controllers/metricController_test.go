@@ -38,7 +38,7 @@ func TestMetricsController_SendMetrics(t *testing.T) {
 			postError: nil,
 			url: func(metric models.Metric) string {
 
-				return ToURL(metric, cfg)
+				return fmt.Sprintf("http://%s/update/%s/%s/%d", cfg.AddressServer, metric.Type, metric.Name, metric.Value)
 			},
 		},
 		{
@@ -54,7 +54,7 @@ func TestMetricsController_SendMetrics(t *testing.T) {
 				cfg := &config.AgentConfig{
 					AddressServer: "localhost:8080",
 				}
-				return ToURL(metric, cfg)
+				return fmt.Sprintf("http://%s/update/%s/%s/%d", cfg.AddressServer, metric.Type, metric.Name, metric.Value)
 			},
 		},
 	}

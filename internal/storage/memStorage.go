@@ -17,16 +17,20 @@ func NewMemStorage() *MemStorage {
 	}
 }
 
-func (m *MemStorage) UpdateGauge(name string, value float64) {
+func (m *MemStorage) UpdateGauge(name string, value float64) float64 {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	m.Gauges[name] = value
+
+	return m.Gauges[name]
 }
 
-func (m *MemStorage) UpdateCounter(name string, value int64) {
+func (m *MemStorage) UpdateCounter(name string, value int64) int64 {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	m.Counters[name] += value
+
+	return m.Counters[name]
 }
 
 func (m *MemStorage) GetGauge(name string) (float64, bool) {

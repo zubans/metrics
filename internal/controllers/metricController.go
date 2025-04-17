@@ -1,15 +1,17 @@
 package controllers
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"github.com/zubans/metrics/internal/config"
 	"github.com/zubans/metrics/internal/models"
 	"github.com/zubans/metrics/internal/services"
+	"log"
 	"net/http"
+	"time"
 )
 
 type MetricControllerer interface {
-	NewMetricsController(metricsService *services.MetricsService) *MetricsController
 	UpdateMetrics()
 	SendMetrics()
 }
@@ -32,7 +34,7 @@ func (mc *MetricsController) SendMetrics() {
 	metrics := mc.metricsService.GetMetrics()
 
 	for _, metric := range metrics.MetricList {
-		url := ToURL(metric, mc.metricsService.Cfg)
+		url := fmt.Sprintf("http://%s/update/%s/%s/%d", mc.metricsService.Cfg.AddressServer, metric.Type, metric.Name, metric.Value)
 
 		resp, err := http.Post(url, "text/plain", nil)
 		if err != nil {
@@ -49,7 +51,33 @@ func (mc *MetricsController) SendMetrics() {
 	}
 }
 
-func ToURL(m models.Metric, cfg *config.AgentConfig) string {
+func (mc *MetricsController) JSONSendMetrics() {
+	metrics := mc.metricsService.GetMetrics()
+	dtoMetrics := models.ConvertMetricsListToDTO(metrics.MetricList)
 
-	return fmt.Sprintf("http://%s/update/%s/%s/%d", cfg.AddressServer, m.Type, m.Name, m.Value)
+	url := fmt.Sprintf("http://%s/update/", mc.metricsService.Cfg.AddressServer)
+
+	client := http.Client{
+		Timeout: 3 * time.Second,
+	}
+	for _, metric := range dtoMetrics {
+		b, _ := json.Marshal(metric)
+
+		resp, err := client.Post(url, "application/json", bytes.NewBuffer(b))
+		if err != nil {
+			log.Printf("Error sending metric %s: %v. BODY: %v\n", metric.ID, err, metric)
+			continue
+		}
+
+		err = resp.Body.Close()
+		if err != nil {
+			fmt.Printf("Failed to close Body: %s\n", err)
+			return
+		}
+		if resp.StatusCode == http.StatusOK {
+			fmt.Printf("Successfully sent metric: %s\n", metric.ID)
+		} else {
+			fmt.Printf("Failed to send metric: %s, status code: %d\n", metric.ID, resp.StatusCode)
+		}
+	}
 }
