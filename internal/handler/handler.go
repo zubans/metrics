@@ -196,9 +196,8 @@ func (h *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
-	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 
 	_, err = w.Write(res)
 	if err != nil {
