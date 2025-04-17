@@ -43,7 +43,7 @@ func (h *Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	details, err := h.service.UpdateMetric(mData)
+	_, details, err := h.service.UpdateMetric(mData)
 
 	if err != nil {
 		var CustomErr *errdefs.CustomError
@@ -84,7 +84,7 @@ func (h *Handler) UpdateMetricJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid input", http.StatusBadRequest)
 	}
 
-	details, err := h.service.UpdateMetric(mData)
+	res, details, err := h.service.UpdateMetric(mData)
 
 	if err != nil {
 		var CustomErr *errdefs.CustomError
@@ -99,6 +99,10 @@ func (h *Handler) UpdateMetricJSON(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(res); err != nil {
+		logger.Log.Error("failed to encode response", zap.Error(err))
+	}
 }
 
 func (h *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {

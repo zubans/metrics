@@ -11,8 +11,8 @@ import (
 )
 
 type MetricStorage interface {
-	UpdateGauge(name string, value float64)
-	UpdateCounter(name string, value int64)
+	UpdateGauge(name string, value float64) float64
+	UpdateCounter(name string, value int64) int64
 	GetGauge(name string) (float64, bool)
 	GetCounter(name string) (int64, bool)
 	GetGauges() map[string]float64
@@ -156,12 +156,12 @@ func (s Storage) UpdateMetric(mData *MetricData) (*models.MetricsDTO, *errdefs.C
 			return nil, errdefs.NewBadRequestError("invalid gauge value"), fmt.Errorf("invalid gauge value")
 		}
 
-		s.storage.UpdateGauge(mData.Name, value)
+		res := s.storage.UpdateGauge(mData.Name, value)
 
 		return &models.MetricsDTO{
 			ID:    mData.Name,
 			MType: "gauge",
-			Value: &value,
+			Value: &res,
 		}, nil, nil
 	case "counter":
 		value, err := ParseMetricValue(mData)
@@ -169,16 +169,14 @@ func (s Storage) UpdateMetric(mData *MetricData) (*models.MetricsDTO, *errdefs.C
 			return nil, errdefs.NewBadRequestError("invalid counter metric value"), fmt.Errorf("invalid counter metric value")
 		}
 
-		s.storage.UpdateCounter(mData.Name, int64(value))
+		res := s.storage.UpdateCounter(mData.Name, int64(value))
 
 		return &models.MetricsDTO{
 			ID:    mData.Name,
 			MType: "counter",
-			Delta: &newVal,
+			Delta: &res,
 		}, nil, nil
 	default:
 		return nil, errdefs.NewBadRequestError("invalid counter metric type"), fmt.Errorf("invalid counter metric type")
 	}
-
-	return nil, nil, nil
 }
