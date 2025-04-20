@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"github.com/zubans/metrics/internal/models"
@@ -41,12 +42,15 @@ func (mc *MetricsController) SendMetrics() {
 			fmt.Printf("Error sending metric %s: %v\n", metric.Name, err)
 			continue
 		}
-		defer resp.Body.Close()
 
 		if resp.StatusCode == http.StatusOK {
 			fmt.Printf("Successfully sent metric: %s\n", metric.Name)
 		} else {
 			fmt.Printf("Failed to send metric: %s, status code: %d\n", metric.Name, resp.StatusCode)
+		}
+		err = resp.Body.Close()
+		if err != nil {
+			return
 		}
 	}
 }
@@ -58,26 +62,52 @@ func (mc *MetricsController) JSONSendMetrics() {
 	url := fmt.Sprintf("http://%s/update/", mc.metricsService.Cfg.AddressServer)
 
 	client := http.Client{
-		Timeout: 3 * time.Second,
+		Timeout: 100 * time.Millisecond,
 	}
-	for _, metric := range dtoMetrics {
-		b, _ := json.Marshal(metric)
 
-		resp, err := client.Post(url, "application/json", bytes.NewBuffer(b))
+	for _, metric := range dtoMetrics {
+		b, err := json.Marshal(metric)
+		if err != nil {
+			log.Printf("Error json encode metric data")
+		}
+
+		var buf bytes.Buffer
+
+		gz := gzip.NewWriter(&buf)
+
+		_, err = gz.Write(b)
+		if err != nil {
+			log.Println("Error compressing metric data")
+			return
+		}
+
+		err = gz.Close()
+		if err != nil {
+			log.Println("Error close gzip compressor")
+			return
+		}
+
+		req, _ := http.NewRequest("POST", url, &buf)
+
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Encoding", "gzip")
+
+		response, err := client.Do(req)
 		if err != nil {
 			log.Printf("Error sending metric %s: %v. BODY: %v\n", metric.ID, err, metric)
 			continue
 		}
 
-		err = resp.Body.Close()
+		err = response.Body.Close()
 		if err != nil {
 			fmt.Printf("Failed to close Body: %s\n", err)
 			return
 		}
-		if resp.StatusCode == http.StatusOK {
+
+		if response.StatusCode == http.StatusOK {
 			fmt.Printf("Successfully sent metric: %s\n", metric.ID)
 		} else {
-			fmt.Printf("Failed to send metric: %s, status code: %d\n", metric.ID, resp.StatusCode)
+			fmt.Printf("Failed to send metric: %s, status code: %d\n", metric.ID, response.StatusCode)
 		}
 	}
 }

@@ -39,6 +39,7 @@ func main() {
 	memHandler := handler.NewHandler(serv)
 
 	r := router.GetRouter(memHandler)
+
 	if err := run(logger.RequestLogger(r)); err != nil {
 		log.Printf("Server failed to start: %v", err)
 	}

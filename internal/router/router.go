@@ -1,15 +1,18 @@
 package router
 
 import (
+	"compress/gzip"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/zubans/metrics/internal/handler"
 	"net/http"
+	"strings"
 )
 
 func GetRouter(h *handler.Handler) http.Handler {
 	r := chi.NewRouter()
 
-	r.Get("/", h.ShowMetrics)
+	r.With(middleware.Compress(5, "text/html")).Get("/", h.ShowMetrics)
 	r.Post("/update/{type}/{name}/{value}", h.UpdateMetric)
 	r.Route("/value/{type}", func(r chi.Router) {
 		r.Route("/{name}", func(r chi.Router) {
@@ -17,8 +20,30 @@ func GetRouter(h *handler.Handler) http.Handler {
 			r.Get("/", h.GetMetric)
 		})
 	})
-	r.Post("/update/", h.UpdateMetricJSON)
+	r.With(GzipMiddleware).Post("/update/", h.UpdateMetricJSON)
 	r.Post("/value/", h.GetMetricJSON)
 
 	return r
+}
+
+func GzipMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
+			gzReader, err := gzip.NewReader(r.Body)
+			if err != nil {
+				http.Error(w, "Invalid gzip body", http.StatusBadRequest)
+				return
+			}
+
+			defer func(gzReader *gzip.Reader) {
+				err := gzReader.Close()
+				if err != nil {
+					http.Error(w, "Error close gzReader", http.StatusBadRequest)
+				}
+			}(gzReader)
+			r.Body = gzReader
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
