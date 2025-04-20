@@ -21,7 +21,7 @@ func GetRouter(h *handler.Handler) http.Handler {
 		})
 	})
 	r.With(GzipMiddleware).Post("/update/", h.UpdateMetricJSON)
-	r.Post("/value/", h.GetMetricJSON)
+	r.With(GzipMiddleware).Post("/value/", h.GetMetricJSON)
 
 	return r
 }
