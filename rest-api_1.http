@@ -18,6 +18,12 @@ Content-Type: application/json
   "value": 15423.1988
 }
 
+### GET ALL
+GET http://localhost:8080
+Content-Type: text/html
+Accept-Encoding: gzip
+
+
 ### Send POST request for get gauge
 POST http://localhost:8080/value/
 Content-Type: application/json
