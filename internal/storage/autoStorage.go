@@ -28,5 +28,5 @@ func (s *AutoStorage) GetCounter(name string) (int64, bool) { return s.storage.G
 func (s *AutoStorage) GetGauges() map[string]float64        { return s.storage.GetGauges() }
 func (s *AutoStorage) GetCounters() map[string]int64        { return s.storage.GetCounters() }
 func (s *AutoStorage) ShowMetrics() (map[string]float64, map[string]int64) {
-	return s.ShowMetrics()
+	return s.storage.ShowMetrics()
 }
