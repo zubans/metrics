@@ -13,9 +13,9 @@ POST http://localhost:8080/update/
 Content-Type: application/json
 
 {
-  "id": "some_gouge",
+  "id": "Alloc",
   "type": "gauge",
-  "value": 15423.1988
+  "value": 15423.1987
 }
 
 ### GET ALL

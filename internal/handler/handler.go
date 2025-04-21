@@ -64,7 +64,7 @@ func (h *Handler) UpdateMetricJSON(w http.ResponseWriter, r *http.Request) {
 	var m models.MetricsDTO
 
 	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
-		http.Error(w, "invalid input: "+err.Error(), http.StatusBadRequest)
+		writeJSONError(w, "invalid input: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -99,7 +99,7 @@ func (h *Handler) UpdateMetricJSON(w http.ResponseWriter, r *http.Request) {
 		val := strconv.FormatInt(int64(*m.Delta), 10)
 		mData.Value = &val
 	default:
-		http.Error(w, "invalid input", http.StatusBadRequest)
+		writeJSONError(w, "invalid input", http.StatusBadRequest)
 		return
 	}
 

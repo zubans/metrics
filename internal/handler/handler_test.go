@@ -16,29 +16,34 @@ func TestHandler_UpdateMetricJSON(t *testing.T) {
 	newService := services.NewMetricService(newMemStorage)
 	handler := NewHandler(newService)
 	tests := []struct {
-		name               string
-		requestData        string
-		expectedStatusCode int
+		name                string
+		requestData         string
+		expectedStatusCode  int
+		expectedContentType string
 	}{
 		{
-			name:               "Valid Counter Metric",
-			requestData:        `{  "id": "PollCount",  "type": "counter",  "delta": 1}`,
-			expectedStatusCode: http.StatusOK,
+			name:                "Valid Counter Metric",
+			requestData:         `{  "id": "PollCount",  "type": "counter",  "delta": 1}`,
+			expectedStatusCode:  http.StatusOK,
+			expectedContentType: "application/json",
 		},
 		{
-			name:               "Valid Gauge Metric",
-			requestData:        `{  "id": "Alloc",  "type": "gauge",  "value": 1}`,
-			expectedStatusCode: http.StatusOK,
+			name:                "Valid Gauge Metric",
+			requestData:         `{  "id": "Alloc",  "type": "gauge",  "value": 1}`,
+			expectedStatusCode:  http.StatusOK,
+			expectedContentType: "application/json",
 		},
 		{
-			name:               "Invalid Gauge Metric - bad value type",
-			requestData:        `{  "id": "Alloc",  "type": "gauge",  "value": "1""}`,
-			expectedStatusCode: http.StatusBadRequest,
+			name:                "Invalid Gauge Metric - bad value type",
+			requestData:         `{  "id": "Alloc",  "type": "gauge",  "value": "1""}`,
+			expectedStatusCode:  http.StatusBadRequest,
+			expectedContentType: "application/json",
 		},
 		{
-			name:               "Invalid Gauge Metric - unsupported type",
-			requestData:        `{  "id": "Alloc",  "type": "unsupported",  "value": 1"}`,
-			expectedStatusCode: http.StatusBadRequest,
+			name:                "Invalid Gauge Metric - unsupported type",
+			requestData:         `{  "id": "Alloc",  "type": "unsupported",  "value": 1"}`,
+			expectedStatusCode:  http.StatusBadRequest,
+			expectedContentType: "application/json",
 		},
 	}
 
@@ -55,6 +60,7 @@ func TestHandler_UpdateMetricJSON(t *testing.T) {
 			h.ServeHTTP(rr, req)
 
 			assert.Equal(t, tt.expectedStatusCode, rr.Code)
+			assert.Equal(t, tt.expectedContentType, rr.Header().Get("Content-Type"))
 		})
 	}
 }
