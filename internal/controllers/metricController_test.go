@@ -2,93 +2,137 @@ package controllers
 
 import (
 	"bytes"
+	"compress/gzip"
+	"encoding/json"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zubans/metrics/internal/config"
 	"github.com/zubans/metrics/internal/models"
 	"github.com/zubans/metrics/internal/services"
-	"io"
-	"net/http"
-	"testing"
 )
 
-var httpPost = http.Post
+type roundTripFunc func(*http.Request) (*http.Response, error)
 
-func TestMetricsController_SendMetrics(t *testing.T) {
-	cfg := config.NewAgentConfig()
-	type fields struct {
-		metricsService *services.MetricsService
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func TestMetricsController_JSONSendMetrics(t *testing.T) {
+	cfg := &config.AgentConfig{
+		AddressServer: "localhost:8080",
+		PollInterval:  2,
+		SendInterval:  10,
 	}
-	tests := []struct {
-		name      string
-		fields    fields
-		response  *http.Response
-		postError error
-		url       func(models.Metric) string
-	}{
-		{
-			name: "success",
-			fields: fields{
-				metricsService: services.NewMetricsService(cfg),
-			},
-			response: &http.Response{
-				StatusCode: http.StatusOK,
-			},
-			postError: nil,
-			url: func(metric models.Metric) string {
 
-				return fmt.Sprintf("http://%s/update/%s/%s/%d", cfg.AddressServer, metric.Type, metric.Name, metric.Value)
-			},
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
+
+		gz, err := gzip.NewReader(r.Body)
+		require.NoError(t, err)
+		defer gz.Close()
+
+		body, err := io.ReadAll(gz)
+		require.NoError(t, err)
+
+		var metric models.MetricsDTO
+		err = json.Unmarshal(body, &metric)
+		require.NoError(t, err)
+
+		assert.Contains(t, []string{"gauge", "counter"}, metric.MType)
+		assert.NotEmpty(t, metric.ID)
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	cfg.AddressServer = server.URL[7:] // убираем "http://"
+
+	service := services.NewMetricsService(cfg)
+	controller := &MetricsController{
+		metricsService: service,
+		httpClient:     &http.Client{},
+	}
+
+	t.Run("CollectMetrics populates metrics", func(t *testing.T) {
+		controller.metricsService.CollectMetrics()
+		metrics := controller.metricsService.GetMetrics()
+
+		assert.NotEmpty(t, metrics.MetricList)
+		assert.Greater(t, metrics.PollCount, 0)
+		expectedType := models.Gauge
+		expectedName := "Alloc"
+
+		found := false
+		for _, m := range metrics.MetricList {
+			if m.Type == expectedType && m.Name == expectedName {
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "Metric %s/%s not found", expectedType, expectedName)
+	})
+
+	t.Run("Successful metrics sending", func(t *testing.T) {
+		controller.metricsService.CollectMetrics()
+		controller.JSONSendMetrics()
+
+		metrics := controller.metricsService.GetMetrics()
+		assert.Len(t, metrics.MetricList, 29)
+	})
+
+	t.Run("Error handling", func(t *testing.T) {
+		mc := NewMetricsController(service)
+		mc.httpClient = &http.Client{
+			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return nil, fmt.Errorf("connection refused")
+			}),
+		}
+
+		logBuffer := bytes.NewBuffer(nil)
+		log.SetOutput(logBuffer)
+		defer log.SetOutput(os.Stderr)
+
+		mc.UpdateMetrics()
+		mc.JSONSendMetrics()
+
+		require.Contains(t, logBuffer.String(), "Error sending metric",
+			"Должна быть ошибка отправки метрики")
+		require.Contains(t, logBuffer.String(), "connection refused",
+			"В логе должна быть причина ошибки")
+	})
+}
+
+func TestErrorScenarios(t *testing.T) {
+	cfg := &config.AgentConfig{
+		AddressServer: "invalid-url:9999",
+	}
+
+	service := services.NewMetricsService(cfg)
+	controller := &MetricsController{
+		metricsService: service,
+		httpClient: &http.Client{
+			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return nil, fmt.Errorf("connection refused")
+			}),
 		},
-		{
-			name: "error",
-			fields: fields{
-				metricsService: services.NewMetricsService(cfg),
-			},
-			response: &http.Response{
-				StatusCode: http.StatusInternalServerError,
-			},
-			postError: fmt.Errorf("error sending metric"),
-			url: func(metric models.Metric) string {
-				cfg := &config.AgentConfig{
-					AddressServer: "localhost:8080",
-				}
-				return fmt.Sprintf("http://%s/update/%s/%s/%d", cfg.AddressServer, metric.Type, metric.Name, metric.Value)
-			},
-		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			httpPost = func(url string, contentType string, body io.Reader) (*http.Response, error) {
-				if body == nil {
-					body = bytes.NewBuffer([]byte{})
-				}
+	controller.UpdateMetrics()
 
-				expectedURL := tt.url(models.Metric{
-					Type:  models.Gauge,
-					Name:  "Alloc",
-					Value: 123,
-				})
-				assert.Equal(t, expectedURL, url, "Urls should be equal")
+	var logBuffer bytes.Buffer
+	log.SetOutput(&logBuffer)
 
-				return tt.response, tt.postError
-			}
-
-			mc := &MetricsController{
-				metricsService: tt.fields.metricsService,
-			}
-
-			mc.metricsService.CollectMetrics()
-
-			mc.SendMetrics()
-
-			if tt.postError == nil {
-				require.Equal(t, http.StatusOK, tt.response.StatusCode, "Expected status code to be equal")
-			} else {
-				require.NotNil(t, tt.postError, "Error metric")
-			}
-		})
-	}
+	t.Run("Connection error", func(t *testing.T) {
+		controller.JSONSendMetrics()
+		assert.Contains(t, logBuffer.String(), "Error sending metric")
+	})
 }

@@ -46,7 +46,10 @@ func (f *Dump) LoadMetricsFromFile() error {
 		log.Println("error open file")
 	}
 
-	_ = json.Unmarshal(res, f.storage)
+	err = json.Unmarshal(res, f.storage)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

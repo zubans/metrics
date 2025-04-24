@@ -40,7 +40,6 @@ func run(metricsController *controllers.MetricsController, cfg *config.AgentConf
 			time.Sleep(cfg.SendInterval)
 
 			metricsController.JSONSendMetrics()
-			//metricsController.SendMetrics()
 		}
 	}()
 }

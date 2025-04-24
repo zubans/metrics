@@ -1,5 +1,7 @@
 package storage
 
+import "log"
+
 type AutoStorage struct {
 	storage *MemStorage
 	dump    *Dump
@@ -11,14 +13,20 @@ func NewAutoDump(storage *MemStorage, dump *Dump) *AutoStorage {
 
 func (s *AutoStorage) UpdateGauge(name string, value float64) float64 {
 	res := s.storage.UpdateGauge(name, value)
-	s.dump.SaveMetricToFile()
+	err := s.dump.SaveMetricToFile()
+	if err != nil {
+		log.Println("error save gauge to file")
+	}
 
 	return res
 }
 
 func (s *AutoStorage) UpdateCounter(name string, value int64) int64 {
 	res := s.storage.UpdateCounter(name, value)
-	s.dump.SaveMetricToFile()
+	err := s.dump.SaveMetricToFile()
+	if err != nil {
+		log.Println("error save counter to file")
+	}
 
 	return res
 }

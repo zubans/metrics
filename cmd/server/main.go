@@ -4,6 +4,7 @@ import (
 	"github.com/zubans/metrics/internal/config"
 	"github.com/zubans/metrics/internal/handler"
 	"github.com/zubans/metrics/internal/logger"
+	"github.com/zubans/metrics/internal/middlewares"
 	"github.com/zubans/metrics/internal/router"
 	"github.com/zubans/metrics/internal/services"
 	"github.com/zubans/metrics/internal/storage"
@@ -16,6 +17,7 @@ import (
 var cfg = config.NewServerConfig()
 
 func run(h http.Handler) error {
+
 	if err := logger.Initialize(cfg.FlagLogLevel); err != nil {
 		log.Printf("logger error: %v", err)
 	}
@@ -66,7 +68,7 @@ func main() {
 	var memHandler = handler.NewHandler(serv)
 	r := router.GetRouter(memHandler)
 
-	if err := run(logger.RequestLogger(r)); err != nil {
+	if err := run(middlewares.RequestLogger(r)); err != nil {
 		log.Printf("Server failed to start: %v", err)
 	}
 

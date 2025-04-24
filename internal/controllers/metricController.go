@@ -7,10 +7,15 @@ import (
 	"fmt"
 	"github.com/zubans/metrics/internal/models"
 	"github.com/zubans/metrics/internal/services"
+	"io"
 	"log"
 	"net/http"
 	"time"
 )
+
+var gzipNewWriter = func(w io.Writer) *gzip.Writer {
+	return gzip.NewWriter(w)
+}
 
 type MetricControllerer interface {
 	UpdateMetrics()
@@ -19,11 +24,15 @@ type MetricControllerer interface {
 
 type MetricsController struct {
 	metricsService *services.MetricsService
+	httpClient     *http.Client
 }
 
 func NewMetricsController(metricsService *services.MetricsService) *MetricsController {
 	return &MetricsController{
 		metricsService: metricsService,
+		httpClient: &http.Client{
+			Timeout: 100 * time.Millisecond,
+		},
 	}
 }
 
@@ -31,39 +40,11 @@ func (mc *MetricsController) UpdateMetrics() {
 	mc.metricsService.CollectMetrics()
 }
 
-func (mc *MetricsController) SendMetrics() {
-	metrics := mc.metricsService.GetMetrics()
-
-	for _, metric := range metrics.MetricList {
-		url := fmt.Sprintf("http://%s/update/%s/%s/%d", mc.metricsService.Cfg.AddressServer, metric.Type, metric.Name, metric.Value)
-
-		resp, err := http.Post(url, "text/plain", nil)
-		if err != nil {
-			fmt.Printf("Error sending metric %s: %v\n", metric.Name, err)
-			continue
-		}
-
-		if resp.StatusCode == http.StatusOK {
-			fmt.Printf("Successfully sent metric: %s\n", metric.Name)
-		} else {
-			fmt.Printf("Failed to send metric: %s, status code: %d\n", metric.Name, resp.StatusCode)
-		}
-		err = resp.Body.Close()
-		if err != nil {
-			return
-		}
-	}
-}
-
 func (mc *MetricsController) JSONSendMetrics() {
 	metrics := mc.metricsService.GetMetrics()
 	dtoMetrics := models.ConvertMetricsListToDTO(metrics.MetricList)
 
 	url := fmt.Sprintf("http://%s/update/", mc.metricsService.Cfg.AddressServer)
-
-	client := http.Client{
-		Timeout: 100 * time.Millisecond,
-	}
 
 	for _, metric := range dtoMetrics {
 		b, err := json.Marshal(metric)
@@ -73,7 +54,7 @@ func (mc *MetricsController) JSONSendMetrics() {
 
 		var buf bytes.Buffer
 
-		gz := gzip.NewWriter(&buf)
+		gz := gzipNewWriter(&buf)
 
 		_, err = gz.Write(b)
 		if err != nil {
@@ -92,7 +73,7 @@ func (mc *MetricsController) JSONSendMetrics() {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Content-Encoding", "gzip")
 
-		response, err := client.Do(req)
+		response, err := mc.httpClient.Do(req)
 		if err != nil {
 			log.Printf("Error sending metric %s: %v. BODY: %v\n", metric.ID, err, metric)
 			continue
@@ -100,14 +81,14 @@ func (mc *MetricsController) JSONSendMetrics() {
 
 		err = response.Body.Close()
 		if err != nil {
-			fmt.Printf("Failed to close Body: %s\n", err)
+			log.Printf("Failed to close Body: %s\n", err)
 			return
 		}
 
 		if response.StatusCode == http.StatusOK {
-			fmt.Printf("Successfully sent metric: %s\n", metric.ID)
+			log.Printf("Successfully sent metric: %s\n", metric.ID)
 		} else {
-			fmt.Printf("Failed to send metric: %s, status code: %d\n", metric.ID, response.StatusCode)
+			log.Printf("Failed to send metric: %s, status code: %d\n", metric.ID, response.StatusCode)
 		}
 	}
 }
