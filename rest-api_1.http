@@ -1,0 +1,55 @@
+### Send POST request for update counter
+POST http://localhost:8080/update/
+Content-Type: application/json
+
+{
+  "id": "PollCount",
+  "type": "counter",
+  "value": 1
+}
+
+### Send POST request for update gauge
+POST http://localhost:8080/update/
+Content-Type: application/json
+
+{
+  "id": "Alloc",
+  "type": "gauge",
+  "value": 15423.1987
+}
+
+### GET ALL
+GET http://localhost:8080
+Content-Type: text/html
+Accept-Encoding: gzip
+
+
+### Send POST request for get gauge
+POST http://localhost:8080/value/
+Content-Type: application/json
+
+{"id":"some_gouge","type":"gauge"}
+
+
+### Send POST request for get metric
+POST http://localhost:8080/value/
+Content-Type: application/json
+
+{"id":"PollCount","type":"counter"}
+
+### Send POST request for get metric
+POST http://localhost:8083/value/
+Content-Type: application/json
+
+{"id":"GetSet23","type":"counter"}
+
+<> 2025-04-16T120540.200.txt
+
+### SEND POST ITER2
+POST http://localhost:8080/update/gauge/Alloc/667168
+
+### GET VALUE ITER2
+GET http://localhost:8080/value/gauge/Alloc
+
+
+

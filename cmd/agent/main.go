@@ -20,21 +20,26 @@ func main() {
 
 	metricsController := controllers.NewMetricsController(metricsService)
 
+	stopChan := make(chan struct{})
+
+	run(metricsController, cfg)
+
+	<-stopChan
+}
+
+func run(metricsController *controllers.MetricsController, cfg *config.AgentConfig) {
 	go func() {
 		for {
 			metricsController.UpdateMetrics()
-
 			time.Sleep(cfg.PollInterval)
 		}
 	}()
 
 	go func() {
 		for {
-			metricsController.SendMetrics()
-
 			time.Sleep(cfg.SendInterval)
+
+			metricsController.JSONSendMetrics()
 		}
 	}()
-
-	select {}
 }

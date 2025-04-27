@@ -1,16 +1,18 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/go-playground/validator/v10"
 	"github.com/zubans/metrics/internal/errdefs"
+	"github.com/zubans/metrics/internal/models"
 	"sort"
 	"strconv"
 )
 
 type MetricStorage interface {
-	UpdateGauge(name string, value float64)
-	UpdateCounter(name string, value int64)
+	UpdateGauge(name string, value float64) float64
+	UpdateCounter(name string, value int64) int64
 	GetGauge(name string) (float64, bool)
 	GetCounter(name string) (int64, bool)
 	GetGauges() map[string]float64
@@ -92,7 +94,7 @@ func NewMetricService(storage MetricStorage) *Storage {
 	return &Storage{storage: storage}
 }
 
-func (s Storage) GetMetrics(mData *MetricData) (string, *errdefs.CustomError) {
+func (s Storage) GetMetric(mData *MetricData) (string, *errdefs.CustomError) {
 	if mData.Type == "counter" {
 		value, found := s.storage.GetCounter(mData.Name)
 		if found {
@@ -112,29 +114,77 @@ func (s Storage) GetMetrics(mData *MetricData) (string, *errdefs.CustomError) {
 	}
 }
 
-func (s Storage) UpdateGauges(mData *MetricData) (*errdefs.CustomError, error) {
+func (s Storage) GetJSONMetric(jsonData *models.MetricsDTO) ([]byte, *errdefs.CustomError) {
+	if jsonData.MType == string(models.Counter) {
+		value, found := s.storage.GetCounter(jsonData.ID)
+		if found {
+			jsonData.Delta = &value
+			res, err := json.Marshal(jsonData)
+			if err != nil {
+				return nil, errdefs.NewBadRequestError("can't marshal json data")
+			}
+			return res, nil
+		} else {
+			return nil, errdefs.NewNotFoundError("metric name required")
+		}
+	} else if jsonData.MType == string(models.Gauge) {
+		value, found := s.storage.GetGauge(jsonData.ID)
+		if found {
+			jsonData.Value = &value
+			res, err := json.Marshal(jsonData)
+			if err != nil {
+				return nil, errdefs.NewBadRequestError("can't marshal json data")
+			}
+			return res, nil
+		} else {
+			return nil, errdefs.NewNotFoundError("metric name required")
+		}
+	} else {
+		return nil, errdefs.NewBadRequestError("Invalid metric type")
+	}
+}
+
+func (s Storage) UpdateMetric(mData *MetricData) (*models.MetricsDTO, *errdefs.CustomError, error) {
 	if mData.Name == "" {
-		return errdefs.NewNotFoundError("metric name required"), fmt.Errorf("metric name required")
+		return nil, errdefs.NewNotFoundError("metric name required"), fmt.Errorf("metric name required")
 	}
 
 	switch mData.Type {
 	case "gauge":
-		value, err := ParseMetricValue(mData)
-		if err != nil {
-			return errdefs.NewBadRequestError("invalid gauge value"), fmt.Errorf("invalid gauge value")
+		if mData.Value == nil {
+			return nil, errdefs.NewBadRequestError("missing gauge value"), fmt.Errorf("missing gauge value")
 		}
 
-		s.storage.UpdateGauge(mData.Name, value)
+		value, err := ParseMetricValue(mData)
+		if err != nil {
+			return nil, errdefs.NewBadRequestError("invalid gauge value"), fmt.Errorf("invalid gauge value")
+		}
+
+		res := s.storage.UpdateGauge(mData.Name, value)
+
+		return &models.MetricsDTO{
+			ID:    mData.Name,
+			MType: "gauge",
+			Value: &res,
+		}, nil, nil
 	case "counter":
-		value, err := ParseMetricValue(mData)
-		if err != nil {
-			return errdefs.NewBadRequestError("invalid counter metric value"), fmt.Errorf("invalid counter metric value")
+		if mData.Value == nil {
+			return nil, errdefs.NewBadRequestError("missing counter delta"), fmt.Errorf("missing counter delta")
 		}
 
-		s.storage.UpdateCounter(mData.Name, int64(value))
-	default:
-		return errdefs.NewBadRequestError("invalid counter metric type"), fmt.Errorf("invalid counter metric type")
-	}
+		value, err := ParseMetricValue(mData)
+		if err != nil {
+			return nil, errdefs.NewBadRequestError("invalid counter metric value"), fmt.Errorf("invalid counter metric value")
+		}
 
-	return nil, nil
+		res := s.storage.UpdateCounter(mData.Name, int64(value))
+
+		return &models.MetricsDTO{
+			ID:    mData.Name,
+			MType: "counter",
+			Delta: &res,
+		}, nil, nil
+	default:
+		return nil, errdefs.NewBadRequestError("invalid counter metric type"), fmt.Errorf("invalid counter metric type")
+	}
 }
