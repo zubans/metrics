@@ -3,8 +3,6 @@ package config
 import (
 	"flag"
 	"github.com/caarlos0/env/v6"
-	"gopkg.in/yaml.v3"
-	"os"
 	"reflect"
 	"time"
 )
@@ -15,21 +13,11 @@ type Config struct {
 	StoreInterval   time.Duration `env:"STORE_INTERVAL"`
 	FileStoragePath string        `env:"FILE_STORAGE_PATH"`
 	Restore         bool          `env:"RESTORE"`
-	DBCfg           DBConfig
-}
-
-type DBConfig struct {
-	User     string
-	Password string
-	DBName   string
-}
-
-type DataBase struct {
-	Credential DBConfig `yaml:"db"`
+	DBCfg           string        `env:"DATABASE_DSN"`
 }
 
 func NewServerConfig() *Config {
-	var db DataBase
+	var db string
 	var cfg Config
 	var addr string
 	var flagLogLevel string
@@ -41,6 +29,7 @@ func NewServerConfig() *Config {
 	flag.StringVar(&flagLogLevel, "l", "info", "log level")
 	flag.IntVar(&storeInterval, "i", 300, "store to file interval")
 	flag.StringVar(&storagePath, "f", "metric_storage.json", "file storage path")
+	flag.StringVar(&db, "d", "***postgres:5432/praktikum?sslmode=disable", "db credential")
 	flag.BoolVar(&isRestore, "r", true, "bool value. Ability to restore metrics from file")
 
 	flag.Parse()
@@ -50,6 +39,7 @@ func NewServerConfig() *Config {
 	cfg.StoreInterval = time.Duration(storeInterval) * time.Second
 	cfg.FileStoragePath = storagePath
 	cfg.Restore = isRestore
+	cfg.DBCfg = db
 
 	err := env.ParseWithFuncs(&cfg, map[reflect.Type]env.ParserFunc{
 		reflect.TypeOf(time.Duration(0)): func(value string) (interface{}, error) {
@@ -70,16 +60,5 @@ func NewServerConfig() *Config {
 		return nil
 	}
 
-	configFile, err := os.ReadFile("config.yaml")
-	if err != nil {
-		return nil
-	}
-
-	err = yaml.Unmarshal(configFile, &db)
-	if err != nil {
-		return nil
-	}
-
-	cfg.DBCfg = db.Credential
 	return &cfg
 }
