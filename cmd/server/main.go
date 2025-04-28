@@ -46,7 +46,6 @@ func main() {
 	err := config.InitDB(connStr)
 	if err != nil {
 		logger.Log.Info("error init DB", zap.Any("error", err))
-		return
 	}
 
 	if cfg.StoreInterval == 0 {

@@ -55,7 +55,7 @@ POST http://localhost:8080/update/gauge/Alloc/667168
 GET http://localhost:8080/value/gauge/Alloc
 
 ### POST VALUE ITER1
-POST http://localhost:8080/update/counter/
+POST http://localhost:8080/update/counter/testCounter/100
 
 
 
