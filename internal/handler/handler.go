@@ -227,7 +227,7 @@ func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
 }
 
 func (h *Handler) PingServer(w http.ResponseWriter, r *http.Request) {
-	err := config.PingDb()
+	err := config.PingDB()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

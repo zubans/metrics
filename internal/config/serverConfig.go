@@ -15,21 +15,21 @@ type Config struct {
 	StoreInterval   time.Duration `env:"STORE_INTERVAL"`
 	FileStoragePath string        `env:"FILE_STORAGE_PATH"`
 	Restore         bool          `env:"RESTORE"`
-	DbCfg           DBConfig
+	DBCfg           DBConfig
 }
 
 type DBConfig struct {
 	User     string
 	Password string
-	DbName   string
+	DBName   string
 }
 
-type Db struct {
+type DataBase struct {
 	Credential DBConfig `yaml:"db"`
 }
 
 func NewServerConfig() *Config {
-	var db Db
+	var db DataBase
 	var cfg Config
 	var addr string
 	var flagLogLevel string
@@ -71,12 +71,15 @@ func NewServerConfig() *Config {
 	}
 
 	configFile, err := os.ReadFile("config.yaml")
+	if err != nil {
+		return nil
+	}
 
 	err = yaml.Unmarshal(configFile, &db)
 	if err != nil {
 		return nil
 	}
 
-	cfg.DbCfg = db.Credential
+	cfg.DBCfg = db.Credential
 	return &cfg
 }

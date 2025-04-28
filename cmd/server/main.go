@@ -41,7 +41,7 @@ func main() {
 
 	var actualStorage services.MetricStorage
 
-	connStr := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", cfg.DbCfg.User, cfg.DbCfg.Password, cfg.DbCfg.DbName)
+	connStr := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", cfg.DBCfg.User, cfg.DBCfg.Password, cfg.DBCfg.DBName)
 
 	err := config.InitDB(connStr)
 	if err != nil {

@@ -16,6 +16,6 @@ func InitDB(connStr string) error {
 	return DB.Ping()
 }
 
-func PingDb() error {
+func PingDB() error {
 	return DB.Ping()
 }
