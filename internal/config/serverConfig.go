@@ -3,6 +3,8 @@ package config
 import (
 	"flag"
 	"github.com/caarlos0/env/v6"
+	"gopkg.in/yaml.v3"
+	"os"
 	"reflect"
 	"time"
 )
@@ -13,9 +15,21 @@ type Config struct {
 	StoreInterval   time.Duration `env:"STORE_INTERVAL"`
 	FileStoragePath string        `env:"FILE_STORAGE_PATH"`
 	Restore         bool          `env:"RESTORE"`
+	DbCfg           DBConfig
+}
+
+type DBConfig struct {
+	User     string
+	Password string
+	DbName   string
+}
+
+type Db struct {
+	Credential DBConfig `yaml:"db"`
 }
 
 func NewServerConfig() *Config {
+	var db Db
 	var cfg Config
 	var addr string
 	var flagLogLevel string
@@ -56,5 +70,13 @@ func NewServerConfig() *Config {
 		return nil
 	}
 
+	configFile, err := os.ReadFile("config.yaml")
+
+	err = yaml.Unmarshal(configFile, &db)
+	if err != nil {
+		return nil
+	}
+
+	cfg.DbCfg = db.Credential
 	return &cfg
 }

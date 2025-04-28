@@ -1,3 +1,6 @@
+###Ping
+GET localhost:8080/ping
+
 ### Send POST request for update counter
 POST http://localhost:8080/update/
 Content-Type: application/json

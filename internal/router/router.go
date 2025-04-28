@@ -22,6 +22,7 @@ func GetRouter(h *handler.Handler) http.Handler {
 	})
 	r.With(middlewares.GzipMiddleware).Post("/update/", h.UpdateMetricJSON)
 	r.Post("/value/", h.GetMetricJSON)
+	r.Get("/ping", h.PingServer)
 
 	return r
 }

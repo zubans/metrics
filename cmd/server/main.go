@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/zubans/metrics/internal/config"
 	"github.com/zubans/metrics/internal/handler"
 	"github.com/zubans/metrics/internal/logger"
@@ -39,6 +40,15 @@ func main() {
 	var dump = storage.NewDump(memStorage, *cfg)
 
 	var actualStorage services.MetricStorage
+
+	connStr := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", cfg.DbCfg.User, cfg.DbCfg.Password, cfg.DbCfg.DbName)
+
+	err := config.InitDB(connStr)
+	if err != nil {
+		logger.Log.Info("error init DB", zap.Any("error", err))
+		return
+	}
+
 	if cfg.StoreInterval == 0 {
 		actualStorage = storage.NewAutoDump(memStorage, dump)
 	} else {
