@@ -29,7 +29,7 @@ func NewServerConfig() *Config {
 	flag.StringVar(&flagLogLevel, "l", "info", "log level")
 	flag.IntVar(&storeInterval, "i", 300, "store to file interval")
 	flag.StringVar(&storagePath, "f", "metric_storage.json", "file storage path")
-	flag.StringVar(&db, "d", "***postgres:5432/praktikum?sslmode=disable", "db credential")
+	flag.StringVar(&db, "d", "postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable", "db credential")
 	flag.BoolVar(&isRestore, "r", true, "bool value. Ability to restore metrics from file")
 
 	flag.Parse()
