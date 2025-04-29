@@ -39,6 +39,12 @@ func main() {
 	var dump = storage.NewDump(memStorage, *cfg)
 
 	var actualStorage services.MetricStorage
+
+	err := config.InitDB(cfg.DBCfg)
+	if err != nil {
+		logger.Log.Info("error init DB", zap.Any("error", err))
+	}
+
 	if cfg.StoreInterval == 0 {
 		actualStorage = storage.NewAutoDump(memStorage, dump)
 	} else {

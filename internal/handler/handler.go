@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-chi/chi/v5"
+	"github.com/zubans/metrics/internal/config"
 	"github.com/zubans/metrics/internal/errdefs"
 	"github.com/zubans/metrics/internal/logger"
 	"github.com/zubans/metrics/internal/models"
@@ -223,4 +224,20 @@ func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
 	}
 
 	_ = json.NewEncoder(w).Encode(resp)
+}
+
+func (h *Handler) PingServer(w http.ResponseWriter, r *http.Request) {
+	err := config.PingDB()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	_, err = io.WriteString(w, "")
+	if err != nil {
+		return
+	}
 }
