@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/go-playground/validator/v10"
@@ -11,13 +12,13 @@ import (
 )
 
 type MetricStorage interface {
-	UpdateGauge(name string, value float64) float64
-	UpdateCounter(name string, value int64) int64
-	GetGauge(name string) (float64, bool)
-	GetCounter(name string) (int64, bool)
-	GetGauges() map[string]float64
-	GetCounters() map[string]int64
-	ShowMetrics() (map[string]float64, map[string]int64)
+	UpdateGauge(ctx context.Context, name string, value float64) float64
+	UpdateCounter(ctx context.Context, name string, value int64) int64
+	GetGauge(ctx context.Context, name string) (float64, bool)
+	GetCounter(ctx context.Context, name string) (int64, bool)
+	GetGauges(ctx context.Context) map[string]float64
+	GetCounters(ctx context.Context) map[string]int64
+	ShowMetrics(ctx context.Context) (map[string]float64, map[string]int64)
 }
 
 type Storage struct {
@@ -62,8 +63,8 @@ func ParseMetricValue(mData *MetricData) (float64, error) {
 	return value, nil
 }
 
-func (s Storage) ShowMetrics() string {
-	gauges, counters := s.storage.ShowMetrics()
+func (s Storage) ShowMetrics(ctx context.Context) string {
+	gauges, counters := s.storage.ShowMetrics(ctx)
 
 	var keys []string
 	for k := range gauges {
@@ -94,16 +95,16 @@ func NewMetricService(storage MetricStorage) *Storage {
 	return &Storage{storage: storage}
 }
 
-func (s Storage) GetMetric(mData *MetricData) (string, *errdefs.CustomError) {
+func (s Storage) GetMetric(ctx context.Context, mData *MetricData) (string, *errdefs.CustomError) {
 	if mData.Type == "counter" {
-		value, found := s.storage.GetCounter(mData.Name)
+		value, found := s.storage.GetCounter(ctx, mData.Name)
 		if found {
 			return strconv.FormatInt(value, 10), nil
 		} else {
 			return "", errdefs.NewNotFoundError("metric name required")
 		}
 	} else if mData.Type == "gauge" {
-		value, found := s.storage.GetGauge(mData.Name)
+		value, found := s.storage.GetGauge(ctx, mData.Name)
 		if found {
 			return strconv.FormatFloat(value, 'f', -1, 64), nil
 		} else {
@@ -114,9 +115,9 @@ func (s Storage) GetMetric(mData *MetricData) (string, *errdefs.CustomError) {
 	}
 }
 
-func (s Storage) GetJSONMetric(jsonData *models.MetricsDTO) ([]byte, *errdefs.CustomError) {
+func (s Storage) GetJSONMetric(ctx context.Context, jsonData *models.MetricsDTO) ([]byte, *errdefs.CustomError) {
 	if jsonData.MType == string(models.Counter) {
-		value, found := s.storage.GetCounter(jsonData.ID)
+		value, found := s.storage.GetCounter(ctx, jsonData.ID)
 		if found {
 			jsonData.Delta = &value
 			res, err := json.Marshal(jsonData)
@@ -128,7 +129,7 @@ func (s Storage) GetJSONMetric(jsonData *models.MetricsDTO) ([]byte, *errdefs.Cu
 			return nil, errdefs.NewNotFoundError("metric name required")
 		}
 	} else if jsonData.MType == string(models.Gauge) {
-		value, found := s.storage.GetGauge(jsonData.ID)
+		value, found := s.storage.GetGauge(ctx, jsonData.ID)
 		if found {
 			jsonData.Value = &value
 			res, err := json.Marshal(jsonData)
@@ -144,7 +145,7 @@ func (s Storage) GetJSONMetric(jsonData *models.MetricsDTO) ([]byte, *errdefs.Cu
 	}
 }
 
-func (s Storage) UpdateMetric(mData *MetricData) (*models.MetricsDTO, *errdefs.CustomError, error) {
+func (s Storage) UpdateMetric(ctx context.Context, mData *MetricData) (*models.MetricsDTO, *errdefs.CustomError, error) {
 	if mData.Name == "" {
 		return nil, errdefs.NewNotFoundError("metric name required"), fmt.Errorf("metric name required")
 	}
@@ -160,7 +161,7 @@ func (s Storage) UpdateMetric(mData *MetricData) (*models.MetricsDTO, *errdefs.C
 			return nil, errdefs.NewBadRequestError("invalid gauge value"), fmt.Errorf("invalid gauge value")
 		}
 
-		res := s.storage.UpdateGauge(mData.Name, value)
+		res := s.storage.UpdateGauge(ctx, mData.Name, value)
 
 		return &models.MetricsDTO{
 			ID:    mData.Name,
@@ -177,7 +178,7 @@ func (s Storage) UpdateMetric(mData *MetricData) (*models.MetricsDTO, *errdefs.C
 			return nil, errdefs.NewBadRequestError("invalid counter metric value"), fmt.Errorf("invalid counter metric value")
 		}
 
-		res := s.storage.UpdateCounter(mData.Name, int64(value))
+		res := s.storage.UpdateCounter(ctx, mData.Name, int64(value))
 
 		return &models.MetricsDTO{
 			ID:    mData.Name,

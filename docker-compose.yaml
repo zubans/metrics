@@ -24,6 +24,7 @@ services:
     image: postgres:17-alpine
     container_name: postgres
     environment:
+      DATABASE_DSN: postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable
       POSTGRES_DB: praktikum
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres

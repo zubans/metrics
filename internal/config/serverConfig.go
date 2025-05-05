@@ -3,6 +3,9 @@ package config
 import (
 	"flag"
 	"github.com/caarlos0/env/v6"
+	"github.com/zubans/metrics/internal/logger"
+	"go.uber.org/zap"
+	"log"
 	"reflect"
 	"time"
 )
@@ -29,7 +32,7 @@ func NewServerConfig() *Config {
 	flag.StringVar(&flagLogLevel, "l", "info", "log level")
 	flag.IntVar(&storeInterval, "i", 300, "store to file interval")
 	flag.StringVar(&storagePath, "f", "metric_storage.json", "file storage path")
-	flag.StringVar(&db, "d", "postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable", "db credential")
+	flag.StringVar(&db, "d", "", "db credential")
 	flag.BoolVar(&isRestore, "r", true, "bool value. Ability to restore metrics from file")
 
 	flag.Parse()
@@ -61,4 +64,12 @@ func NewServerConfig() *Config {
 	}
 
 	return &cfg
+}
+
+func RecoveryServer() {
+	if r := recover(); r != nil {
+		logger.Log.Info("CRITICAL panic occurred", zap.Any("error", r))
+		log.Printf("CRITICAL error %v", r)
+
+	}
 }

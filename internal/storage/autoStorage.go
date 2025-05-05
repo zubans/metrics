@@ -1,6 +1,9 @@
 package storage
 
-import "log"
+import (
+	"context"
+	"log"
+)
 
 type AutoStorage struct {
 	storage *MemStorage
@@ -11,9 +14,9 @@ func NewAutoDump(storage *MemStorage, dump *Dump) *AutoStorage {
 	return &AutoStorage{storage: storage, dump: dump}
 }
 
-func (s *AutoStorage) UpdateGauge(name string, value float64) float64 {
-	res := s.storage.UpdateGauge(name, value)
-	err := s.dump.SaveMetricToFile()
+func (s *AutoStorage) UpdateGauge(ctx context.Context, name string, value float64) float64 {
+	res := s.dump.storage.UpdateGauge(nil, name, value)
+	err := s.dump.SaveMetricToFile(ctx)
 	if err != nil {
 		log.Println("error save gauge to file")
 	}
@@ -21,9 +24,9 @@ func (s *AutoStorage) UpdateGauge(name string, value float64) float64 {
 	return res
 }
 
-func (s *AutoStorage) UpdateCounter(name string, value int64) int64 {
-	res := s.storage.UpdateCounter(name, value)
-	err := s.dump.SaveMetricToFile()
+func (s *AutoStorage) UpdateCounter(ctx context.Context, name string, value int64) int64 {
+	res := s.dump.storage.UpdateCounter(nil, name, value)
+	err := s.dump.SaveMetricToFile(ctx)
 	if err != nil {
 		log.Println("error save counter to file")
 	}
@@ -31,10 +34,18 @@ func (s *AutoStorage) UpdateCounter(name string, value int64) int64 {
 	return res
 }
 
-func (s *AutoStorage) GetGauge(name string) (float64, bool) { return s.storage.GetGauge(name) }
-func (s *AutoStorage) GetCounter(name string) (int64, bool) { return s.storage.GetCounter(name) }
-func (s *AutoStorage) GetGauges() map[string]float64        { return s.storage.GetGauges() }
-func (s *AutoStorage) GetCounters() map[string]int64        { return s.storage.GetCounters() }
-func (s *AutoStorage) ShowMetrics() (map[string]float64, map[string]int64) {
-	return s.storage.ShowMetrics()
+func (s *AutoStorage) GetGauge(ctx context.Context, name string) (float64, bool) {
+	return s.dump.storage.GetGauge(ctx, name)
+}
+func (s *AutoStorage) GetCounter(ctx context.Context, name string) (int64, bool) {
+	return s.dump.storage.GetCounter(ctx, name)
+}
+func (s *AutoStorage) GetGauges(ctx context.Context) map[string]float64 {
+	return s.dump.storage.GetGauges(ctx)
+}
+func (s *AutoStorage) GetCounters(ctx context.Context) map[string]int64 {
+	return s.dump.storage.GetCounters(ctx)
+}
+func (s *AutoStorage) ShowMetrics(ctx context.Context) (map[string]float64, map[string]int64) {
+	return s.dump.storage.ShowMetrics(ctx)
 }

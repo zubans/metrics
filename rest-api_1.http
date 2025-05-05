@@ -18,7 +18,16 @@ Content-Type: application/json
 {
   "id": "Alloc",
   "type": "gauge",
-  "value": 15423.1987
+  "value": 15424.1987
+}
+### Send Conunter
+POST http://localhost:8080/update/
+Content-Type: application/json
+
+{
+"id": "Counter",
+"type": "counter",
+"delta": 10
 }
 
 ### GET ALL
@@ -38,7 +47,7 @@ Content-Type: application/json
 POST http://localhost:8080/value/
 Content-Type: application/json
 
-{"id":"PollCount","type":"counter"}
+{"id":"Counter","type":"counter"}
 
 ### Send POST request for get metric
 POST http://localhost:8083/value/
