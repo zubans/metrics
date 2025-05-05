@@ -139,7 +139,7 @@ func (h *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var res string
-	res, err = h.service.GetMetric(nil, mData)
+	res, err = h.service.GetMetric(h.ctx, mData)
 
 	var CustomErr *errdefs.CustomError
 

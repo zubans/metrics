@@ -15,7 +15,7 @@ func NewAutoDump(storage *MemStorage, dump *Dump) *AutoStorage {
 }
 
 func (s *AutoStorage) UpdateGauge(ctx context.Context, name string, value float64) float64 {
-	res := s.dump.storage.UpdateGauge(nil, name, value)
+	res := s.dump.storage.UpdateGauge(ctx, name, value)
 	err := s.dump.SaveMetricToFile(ctx)
 	if err != nil {
 		log.Println("error save gauge to file")
@@ -25,7 +25,7 @@ func (s *AutoStorage) UpdateGauge(ctx context.Context, name string, value float6
 }
 
 func (s *AutoStorage) UpdateCounter(ctx context.Context, name string, value int64) int64 {
-	res := s.dump.storage.UpdateCounter(nil, name, value)
+	res := s.dump.storage.UpdateCounter(ctx, name, value)
 	err := s.dump.SaveMetricToFile(ctx)
 	if err != nil {
 		log.Println("error save counter to file")
