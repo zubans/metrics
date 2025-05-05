@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/zubans/metrics/internal/handler"
 	"github.com/zubans/metrics/internal/middlewares"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 
 func GetRouter(h *handler.Handler) http.Handler {
 	r := chi.NewRouter()
+	r.Use(middleware.Compress(5, "text/html", "application/json"))
 
 	r.With(middlewares.GzipMiddleware).Get("/", h.ShowMetrics)
 	r.Post("/update/{type}/{name}/{value}", h.UpdateMetric)
