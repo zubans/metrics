@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/zubans/metrics/internal/config"
 	"log"
@@ -26,10 +27,10 @@ func NewDump(storage *MemStorage, cfg config.Config) *Dump {
 	return &Dump{storage: storage, cfg: &cfg}
 }
 
-func (f *Dump) SaveMetricToFile() error {
+func (f *Dump) SaveMetricToFile(ctx context.Context) error {
 	dump := MetricsDump{
-		Gauges:   f.storage.GetGauges(),
-		Counters: f.storage.GetCounters(),
+		Gauges:   f.storage.GetGauges(ctx),
+		Counters: f.storage.GetCounters(ctx),
 	}
 
 	data, err := json.Marshal(dump)
