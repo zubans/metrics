@@ -38,12 +38,8 @@ func TestMetricsController_JSONSendMetrics(t *testing.T) {
 
 		gz, err := gzip.NewReader(r.Body)
 		require.NoError(t, err)
-		defer func(gz *gzip.Reader) {
-			err := gz.Close()
-			if err != nil {
 
-			}
-		}(gz)
+		defer gz.Close()
 
 		body, err := io.ReadAll(gz)
 		require.NoError(t, err)
