@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/go-chi/chi/v5"
+	"github.com/zubans/metrics/internal/config"
 	"github.com/zubans/metrics/internal/errdefs"
 	"github.com/zubans/metrics/internal/logger"
 	"github.com/zubans/metrics/internal/models"
@@ -16,18 +18,19 @@ import (
 )
 
 type ServerMetricService interface {
-	UpdateMetric(mData *services.MetricData) (*models.MetricsDTO, *errdefs.CustomError, error)
-	GetMetric(mData *services.MetricData) (string, *errdefs.CustomError)
-	GetJSONMetric(jsonData *models.MetricsDTO) ([]byte, *errdefs.CustomError)
-	ShowMetrics() string
+	UpdateMetric(ctx context.Context, mData *services.MetricData) (*models.MetricsDTO, *errdefs.CustomError, error)
+	GetMetric(ctx context.Context, mData *services.MetricData) (string, *errdefs.CustomError)
+	GetJSONMetric(ctx context.Context, jsonData *models.MetricsDTO) ([]byte, *errdefs.CustomError)
+	ShowMetrics(ctx context.Context) string
 }
 
 type Handler struct {
 	service ServerMetricService
+	ctx     context.Context
 }
 
-func NewHandler(service ServerMetricService) *Handler {
-	return &Handler{service: service}
+func NewHandler(ctx context.Context, service ServerMetricService) *Handler {
+	return &Handler{service: service, ctx: ctx}
 }
 
 func (h *Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +46,7 @@ func (h *Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, details, err := h.service.UpdateMetric(mData)
+	_, details, err := h.service.UpdateMetric(h.ctx, mData)
 
 	if err != nil {
 		var CustomErr *errdefs.CustomError
@@ -103,7 +106,7 @@ func (h *Handler) UpdateMetricJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, details, err := h.service.UpdateMetric(mData)
+	res, details, err := h.service.UpdateMetric(h.ctx, mData)
 
 	if err != nil {
 		var CustomErr *errdefs.CustomError
@@ -136,7 +139,7 @@ func (h *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var res string
-	res, err = h.service.GetMetric(mData)
+	res, err = h.service.GetMetric(h.ctx, mData)
 
 	var CustomErr *errdefs.CustomError
 
@@ -168,7 +171,7 @@ func (h *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 	var res []byte
 	var err error
 
-	res, err = h.service.GetJSONMetric(m)
+	res, err = h.service.GetJSONMetric(h.ctx, m)
 
 	var CustomErr *errdefs.CustomError
 
@@ -206,7 +209,7 @@ func (h *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ShowMetrics(w http.ResponseWriter, r *http.Request) {
-	value := h.service.ShowMetrics()
+	value := h.service.ShowMetrics(h.ctx)
 
 	_, err := io.WriteString(w, value)
 	if err != nil {
@@ -223,4 +226,20 @@ func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
 	}
 
 	_ = json.NewEncoder(w).Encode(resp)
+}
+
+func (h *Handler) PingServer(w http.ResponseWriter, r *http.Request) {
+	err := config.PingDB()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	_, err = io.WriteString(w, "")
+	if err != nil {
+		return
+	}
 }
