@@ -20,8 +20,8 @@ func GetRouter(h *handler.Handler) http.Handler {
 			r.Get("/", h.GetMetric)
 		})
 	})
-	r.With(middlewares.GzipMiddleware).Post("/update/", h.UpdateMetricJSON)
 	r.With(middlewares.GzipMiddleware).Post("/updates/", h.UpdateMetrics)
+	r.With(middlewares.GzipMiddleware).Post("/update/", h.UpdateMetricJSON)
 	r.Post("/value/", h.GetMetricJSON)
 	r.Get("/ping", h.PingServer)
 

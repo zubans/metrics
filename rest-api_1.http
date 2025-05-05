@@ -40,7 +40,7 @@ Accept-Encoding: gzip
 POST http://localhost:8080/value/
 Content-Type: application/json
 
-{"id":"some_gouge","type":"gauge"}
+{"id":"CounterBatchZip34","type":"counter"}
 
 
 ### Send POST request for get metric
