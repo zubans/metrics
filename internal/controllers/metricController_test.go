@@ -38,17 +38,22 @@ func TestMetricsController_JSONSendMetrics(t *testing.T) {
 
 		gz, err := gzip.NewReader(r.Body)
 		require.NoError(t, err)
-		defer gz.Close()
+		defer func(gz *gzip.Reader) {
+			err := gz.Close()
+			if err != nil {
+
+			}
+		}(gz)
 
 		body, err := io.ReadAll(gz)
 		require.NoError(t, err)
 
-		var metric models.MetricsDTO
+		var metric []models.MetricsDTO
 		err = json.Unmarshal(body, &metric)
 		require.NoError(t, err)
 
-		assert.Contains(t, []string{"gauge", "counter"}, metric.MType)
-		assert.NotEmpty(t, metric.ID)
+		assert.Contains(t, []string{"gauge", "counter"}, metric[0].MType)
+		assert.NotEmpty(t, metric[0].ID)
 
 		w.WriteHeader(http.StatusOK)
 	}))

@@ -47,6 +47,11 @@ func (mc *MetricsController) JSONSendMetrics() {
 	url := fmt.Sprintf("http://%s/updates/", mc.metricsService.Cfg.AddressServer)
 
 	body, err := json.Marshal(dtoMetrics)
+	if err != nil {
+		log.Println("Error json Encode metric data")
+		return
+	}
+
 	var buf bytes.Buffer
 
 	gz := gzipNewWriter(&buf)
