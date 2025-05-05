@@ -55,7 +55,7 @@ func TestMetricsController_JSONSendMetrics(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg.AddressServer = server.URL[7:] // убираем "http://"
+	cfg.AddressServer = server.URL[7:] //убираем "http://"
 
 	service := services.NewMetricsService(cfg)
 	controller := &MetricsController{
