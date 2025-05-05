@@ -55,8 +55,22 @@ func (db *PostDB) UpdateMetrics(ctx context.Context, m []models.MetricsDTO) erro
 		return err
 	}
 
+	counterMap := make(map[string]int64)
+	var gauges []models.MetricsDTO
+
 	for _, v := range m {
-		_, err := tx.ExecContext(ctx, "INSERT INTO metrics (type, name, value, delta, timestamp) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (name, type) DO UPDATE SET delta = $4, value = $3", v.MType, v.ID, v.Value, v.Delta, time.Now())
+		switch v.MType {
+		case string(models.Counter):
+			if v.Delta != nil {
+				counterMap[v.ID] += *v.Delta
+			}
+		case string(models.Gauge):
+			gauges = append(gauges, v)
+		}
+	}
+
+	for k, v := range counterMap {
+		_, err = tx.ExecContext(ctx, "INSERT INTO metrics (type, name, delta, timestamp) VALUES ($1, $2, $3, $4) ON CONFLICT (name, type) DO UPDATE SET delta = $3", string(models.Counter), k, v, time.Now())
 		if err != nil {
 			err := tx.Rollback()
 			if err != nil {
@@ -64,7 +78,17 @@ func (db *PostDB) UpdateMetrics(ctx context.Context, m []models.MetricsDTO) erro
 			}
 			return err
 		}
+	}
 
+	for _, v := range gauges {
+		_, err = tx.ExecContext(ctx, "INSERT INTO metrics (type, name, value, timestamp) VALUES ($1, $2, $3, $4) ON CONFLICT (name, type) DO UPDATE SET value = $3", string(models.Gauge), v.ID, v.Value, time.Now())
+		if err != nil {
+			err := tx.Rollback()
+			if err != nil {
+				return err
+			}
+			return err
+		}
 	}
 
 	err = tx.Commit()
