@@ -19,6 +19,7 @@ import (
 
 type ServerMetricService interface {
 	UpdateMetric(ctx context.Context, mData *services.MetricData) (*models.MetricsDTO, *errdefs.CustomError, error)
+	UpdateMetrics(ctx context.Context, m []models.MetricsDTO) (bool, *errdefs.CustomError, error)
 	GetMetric(ctx context.Context, mData *services.MetricData) (string, *errdefs.CustomError)
 	GetJSONMetric(ctx context.Context, jsonData *models.MetricsDTO) ([]byte, *errdefs.CustomError)
 	ShowMetrics(ctx context.Context) string
@@ -60,6 +61,31 @@ func (h *Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) UpdateMetrics(w http.ResponseWriter, r *http.Request) {
+	var m []models.MetricsDTO
+
+	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
+		writeJSONError(w, "invalid input: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	_, details, err := h.service.UpdateMetrics(h.ctx, m)
+
+	if err != nil {
+		var CustomErr *errdefs.CustomError
+		if errors.As(details, &CustomErr) {
+			logger.Log.Info("custom error",
+				zap.String("message", CustomErr.Message),
+				zap.Int("status_code", CustomErr.Code),
+			)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 }
 

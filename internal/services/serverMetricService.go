@@ -19,10 +19,15 @@ type MetricStorage interface {
 	GetGauges(ctx context.Context) map[string]float64
 	GetCounters(ctx context.Context) map[string]int64
 	ShowMetrics(ctx context.Context) (map[string]float64, map[string]int64)
+	UpdateMetrics(ctx context.Context, m []models.MetricsDTO) error
 }
 
 type Storage struct {
 	storage MetricStorage
+}
+
+func NewMetricService(storage MetricStorage) *Storage {
+	return &Storage{storage: storage}
 }
 
 var validate = validator.New()
@@ -91,10 +96,6 @@ func (s Storage) ShowMetrics(ctx context.Context) string {
 	return result
 }
 
-func NewMetricService(storage MetricStorage) *Storage {
-	return &Storage{storage: storage}
-}
-
 func (s Storage) GetMetric(ctx context.Context, mData *MetricData) (string, *errdefs.CustomError) {
 	if mData.Type == "counter" {
 		value, found := s.storage.GetCounter(ctx, mData.Name)
@@ -143,6 +144,17 @@ func (s Storage) GetJSONMetric(ctx context.Context, jsonData *models.MetricsDTO)
 	} else {
 		return nil, errdefs.NewBadRequestError("Invalid metric type")
 	}
+}
+
+func (s Storage) UpdateMetrics(ctx context.Context, m []models.MetricsDTO) (bool, *errdefs.CustomError, error) {
+	if m == nil {
+		return false, errdefs.NewNotFoundError("metric name required"), fmt.Errorf("metric name required")
+	}
+
+	res := s.storage.UpdateMetrics(ctx, m)
+	fmt.Println(res)
+	return true, nil, nil
+
 }
 
 func (s Storage) UpdateMetric(ctx context.Context, mData *MetricData) (*models.MetricsDTO, *errdefs.CustomError, error) {

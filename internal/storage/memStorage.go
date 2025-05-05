@@ -2,6 +2,8 @@ package storage
 
 import (
 	"context"
+	"fmt"
+	"github.com/zubans/metrics/internal/models"
 	"sync"
 )
 
@@ -73,4 +75,8 @@ func (m *MemStorage) ShowMetrics(ctx context.Context) (map[string]float64, map[s
 	defer m.mutex.Unlock()
 
 	return m.Gauges, m.Counters
+}
+
+func (m *MemStorage) UpdateMetrics(ctx context.Context, mDTO []models.MetricsDTO) error {
+	return fmt.Errorf("forbidden")
 }

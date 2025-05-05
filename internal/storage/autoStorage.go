@@ -2,6 +2,8 @@ package storage
 
 import (
 	"context"
+	"fmt"
+	"github.com/zubans/metrics/internal/models"
 	"log"
 )
 
@@ -48,4 +50,8 @@ func (s *AutoStorage) GetCounters(ctx context.Context) map[string]int64 {
 }
 func (s *AutoStorage) ShowMetrics(ctx context.Context) (map[string]float64, map[string]int64) {
 	return s.dump.storage.ShowMetrics(ctx)
+}
+
+func (s *AutoStorage) UpdateMetrics(ctx context.Context, m []models.MetricsDTO) error {
+	return fmt.Errorf("forbidden")
 }

@@ -6,11 +6,13 @@ import (
 	"errors"
 	"github.com/zubans/metrics/internal/models"
 	"log"
+	"sync"
 	"time"
 )
 
 type PostDB struct {
-	db *sql.DB
+	db    *sql.DB
+	mutex sync.Mutex
 }
 
 func NewDB(db *sql.DB) *PostDB {
@@ -18,6 +20,9 @@ func NewDB(db *sql.DB) *PostDB {
 }
 
 func (db *PostDB) UpdateGauge(ctx context.Context, name string, value float64) float64 {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
 	_, err := db.db.ExecContext(ctx, "INSERT INTO metrics (type, name, value, timestamp) VALUES ($1, $2, $3, $4) ON CONFLICT (name, type) DO UPDATE SET value = $3", models.Gauge, name, value, time.Now())
 
 	if err != nil {
@@ -28,6 +33,9 @@ func (db *PostDB) UpdateGauge(ctx context.Context, name string, value float64) f
 }
 
 func (db *PostDB) UpdateCounter(ctx context.Context, name string, value int64) int64 {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
 	_, err := db.db.ExecContext(ctx, "INSERT INTO metrics (type, name, delta, timestamp) VALUES ($1, $2, $3, $4) ON CONFLICT (name, type) DO UPDATE SET delta = $3", models.Counter, name, value, time.Now())
 
 	if err != nil {
@@ -35,6 +43,36 @@ func (db *PostDB) UpdateCounter(ctx context.Context, name string, value int64) i
 	}
 
 	return value
+}
+
+func (db *PostDB) UpdateMetrics(ctx context.Context, m []models.MetricsDTO) error {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	tx, err := db.db.Begin()
+	if err != nil {
+		log.Println("error create transaction:", err)
+		return err
+	}
+
+	for _, v := range m {
+		_, err := tx.ExecContext(ctx, "INSERT INTO metrics (type, name, value, delta, timestamp) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (name, type) DO UPDATE SET delta = $4, value = $3", v.MType, v.ID, v.Value, v.Delta, time.Now())
+		if err != nil {
+			err := tx.Rollback()
+			if err != nil {
+				return err
+			}
+			return err
+		}
+
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (db *PostDB) GetGauge(ctx context.Context, name string) (float64, bool) {
@@ -102,7 +140,12 @@ func (db *PostDB) ShowMetrics(ctx context.Context) (map[string]float64, map[stri
 		log.Println("Error querying metrics", err)
 	}
 
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			log.Println("Error rows close:", err)
+		}
+	}(rows)
 
 	for rows.Next() {
 		var (
