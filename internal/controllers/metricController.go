@@ -80,6 +80,7 @@ func (mc *MetricsController) JSONSendMetrics() {
 	var response *http.Response
 	for trying := 0; trying <= maxRetries; trying++ {
 		response, err = mc.httpClient.Do(req)
+		err = response.Body.Close()
 		if err != nil {
 			if trying < maxRetries && strings.Contains(err.Error(), "connection refused") {
 				log.Printf("Bad %v trying sending metric: %v. BODY: %v\n", trying+1, err, metrics)
@@ -91,18 +92,10 @@ func (mc *MetricsController) JSONSendMetrics() {
 		}
 	}
 
-	err = response.Body.Close()
-	if err != nil {
-		log.Printf("Failed to close Body: %s\n", err)
-		return
-	}
-	if response != nil {
-
-		if response.StatusCode == http.StatusOK {
-			log.Printf("Successfully sent metric: %v\n", metrics)
-		} else {
-			log.Printf("Failed to send metric: %v, status code: %d\n", metrics, response.StatusCode)
-		}
+	if response.StatusCode == http.StatusOK {
+		log.Printf("Successfully sent metric: %v\n", metrics)
+	} else {
+		log.Printf("Failed to send metric: %v, status code: %d\n", metrics, response.StatusCode)
 	}
 }
 
