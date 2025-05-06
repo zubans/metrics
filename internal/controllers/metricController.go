@@ -91,12 +91,13 @@ func (mc *MetricsController) JSONSendMetrics() {
 		}
 	}
 
+	err = response.Body.Close()
+	if err != nil {
+		log.Printf("Failed to close Body: %s\n", err)
+		return
+	}
 	if response != nil {
-		err = response.Body.Close()
-		if err != nil {
-			log.Printf("Failed to close Body: %s\n", err)
-			return
-		}
+
 		if response.StatusCode == http.StatusOK {
 			log.Printf("Successfully sent metric: %v\n", metrics)
 		} else {
