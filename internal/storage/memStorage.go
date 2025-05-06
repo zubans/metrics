@@ -1,6 +1,9 @@
 package storage
 
 import (
+	"context"
+	"fmt"
+	"github.com/zubans/metrics/internal/models"
 	"sync"
 )
 
@@ -17,7 +20,7 @@ func NewMemStorage() *MemStorage {
 	}
 }
 
-func (m *MemStorage) UpdateGauge(name string, value float64) float64 {
+func (m *MemStorage) UpdateGauge(ctx context.Context, name string, value float64) float64 {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	m.Gauges[name] = value
@@ -25,7 +28,7 @@ func (m *MemStorage) UpdateGauge(name string, value float64) float64 {
 	return m.Gauges[name]
 }
 
-func (m *MemStorage) UpdateCounter(name string, value int64) int64 {
+func (m *MemStorage) UpdateCounter(ctx context.Context, name string, value int64) int64 {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	m.Counters[name] += value
@@ -33,21 +36,21 @@ func (m *MemStorage) UpdateCounter(name string, value int64) int64 {
 	return m.Counters[name]
 }
 
-func (m *MemStorage) GetGauge(name string) (float64, bool) {
+func (m *MemStorage) GetGauge(ctx context.Context, name string) (float64, bool) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	value, exists := m.Gauges[name]
 	return value, exists
 }
 
-func (m *MemStorage) GetCounter(name string) (int64, bool) {
+func (m *MemStorage) GetCounter(ctx context.Context, name string) (int64, bool) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	value, exists := m.Counters[name]
 	return value, exists
 }
 
-func (m *MemStorage) GetGauges() map[string]float64 {
+func (m *MemStorage) GetGauges(ctx context.Context) map[string]float64 {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	result := make(map[string]float64)
@@ -57,7 +60,7 @@ func (m *MemStorage) GetGauges() map[string]float64 {
 	return result
 }
 
-func (m *MemStorage) GetCounters() map[string]int64 {
+func (m *MemStorage) GetCounters(ctx context.Context) map[string]int64 {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	result := make(map[string]int64)
@@ -67,9 +70,13 @@ func (m *MemStorage) GetCounters() map[string]int64 {
 	return result
 }
 
-func (m *MemStorage) ShowMetrics() (map[string]float64, map[string]int64) {
+func (m *MemStorage) ShowMetrics(ctx context.Context) (map[string]float64, map[string]int64) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
 	return m.Gauges, m.Counters
+}
+
+func (m *MemStorage) UpdateMetrics(ctx context.Context, mDTO []models.MetricsDTO) error {
+	return fmt.Errorf("forbidden")
 }
