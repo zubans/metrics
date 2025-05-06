@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -41,6 +42,9 @@ func (mc *MetricsController) UpdateMetrics() {
 }
 
 func (mc *MetricsController) JSONSendMetrics() {
+	maxRetries := 3
+	retryDelays := []time.Duration{1 * time.Second, 3 * time.Second, 5 * time.Second}
+
 	metrics := mc.metricsService.GetMetrics()
 	dtoMetrics := models.ConvertMetricsListToDTO(metrics.MetricList)
 
@@ -73,22 +77,31 @@ func (mc *MetricsController) JSONSendMetrics() {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
 
-	response, err := mc.httpClient.Do(req)
-	if err != nil {
-		log.Printf("Error sending metric: %v. BODY: %v\n", err, metrics)
-		return
+	var response *http.Response
+	for trying := 0; trying <= maxRetries; trying++ {
+		response, err = mc.httpClient.Do(req)
+		if err != nil {
+			if trying < maxRetries && strings.Contains(err.Error(), "connection refused") {
+				log.Printf("Bad %v trying sending metric: %v. BODY: %v\n", trying+1, err, metrics)
+				time.Sleep(retryDelays[trying])
+				continue
+			}
+			log.Printf("Error sending metric: %v. BODY: %v\n", err, metrics)
+			return
+		}
 	}
 
-	err = response.Body.Close()
-	if err != nil {
-		log.Printf("Failed to close Body: %s\n", err)
-		return
-	}
-
-	if response.StatusCode == http.StatusOK {
-		log.Printf("Successfully sent metric: %v\n", metrics)
-	} else {
-		log.Printf("Failed to send metric: %v, status code: %d\n", metrics, response.StatusCode)
+	if response != nil {
+		err = response.Body.Close()
+		if err != nil {
+			log.Printf("Failed to close Body: %s\n", err)
+			return
+		}
+		if response.StatusCode == http.StatusOK {
+			log.Printf("Successfully sent metric: %v\n", metrics)
+		} else {
+			log.Printf("Failed to send metric: %v, status code: %d\n", metrics, response.StatusCode)
+		}
 	}
 }
 
