@@ -92,10 +92,12 @@ func (mc *MetricsController) JSONSendMetrics() {
 		}
 	}
 
-	if response.StatusCode == http.StatusOK {
-		log.Printf("Successfully sent metric: %v\n", metrics)
-	} else {
-		log.Printf("Failed to send metric: %v, status code: %d\n", metrics, response.StatusCode)
+	if response != nil {
+		if response.StatusCode == http.StatusOK {
+			log.Printf("Successfully sent metric: %v\n", metrics)
+		} else {
+			log.Printf("Failed to send metric: %v, status code: %d\n", metrics, response.StatusCode)
+		}
 	}
 }
 
