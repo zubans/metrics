@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"github.com/go-resty/resty/v2"
 	"io"
 	"log"
 	"net/http"
@@ -60,7 +61,7 @@ func TestMetricsController_JSONSendMetrics(t *testing.T) {
 	service := services.NewMetricsService(cfg)
 	controller := &MetricsController{
 		metricsService: service,
-		httpClient:     &http.Client{},
+		httpClient:     resty.New(),
 	}
 
 	t.Run("CollectMetrics populates metrics", func(t *testing.T) {
@@ -92,11 +93,10 @@ func TestMetricsController_JSONSendMetrics(t *testing.T) {
 
 	t.Run("Error handling", func(t *testing.T) {
 		mc := NewMetricsController(service)
-		mc.httpClient = &http.Client{
-			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		mc.httpClient.
+			SetTransport(roundTripFunc(func(req *http.Request) (*http.Response, error) {
 				return nil, fmt.Errorf("connection refused")
-			}),
-		}
+			}))
 
 		logBuffer := bytes.NewBuffer(nil)
 		log.SetOutput(logBuffer)
@@ -120,11 +120,7 @@ func TestErrorScenarios(t *testing.T) {
 	service := services.NewMetricsService(cfg)
 	controller := &MetricsController{
 		metricsService: service,
-		httpClient: &http.Client{
-			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-				return nil, fmt.Errorf("connection refused")
-			}),
-		},
+		httpClient:     resty.New(),
 	}
 
 	controller.UpdateMetrics()

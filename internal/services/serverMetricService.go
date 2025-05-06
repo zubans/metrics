@@ -7,6 +7,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/zubans/metrics/internal/errdefs"
 	"github.com/zubans/metrics/internal/models"
+	"github.com/zubans/metrics/internal/storage"
 	"sort"
 	"strconv"
 )
@@ -16,9 +17,7 @@ type MetricStorage interface {
 	UpdateCounter(ctx context.Context, name string, value int64) int64
 	GetGauge(ctx context.Context, name string) (float64, bool)
 	GetCounter(ctx context.Context, name string) (int64, bool)
-	GetGauges(ctx context.Context) map[string]float64
-	GetCounters(ctx context.Context) map[string]int64
-	ShowMetrics(ctx context.Context) (map[string]float64, map[string]int64)
+	ShowMetrics(ctx context.Context) (map[string]float64, map[string]int64, error)
 	UpdateMetrics(ctx context.Context, m []models.MetricsDTO) error
 }
 
@@ -68,9 +67,12 @@ func ParseMetricValue(mData *MetricData) (float64, error) {
 	return value, nil
 }
 
-func (s Storage) ShowMetrics(ctx context.Context) string {
-	gauges, counters := s.storage.ShowMetrics(ctx)
+func (s Storage) ShowMetrics(ctx context.Context) (string, error) {
+	gauges, counters, err := s.storage.ShowMetrics(ctx)
 
+	if err != nil {
+		return "", err
+	}
 	var keys []string
 	for k := range gauges {
 		keys = append(keys, k)
@@ -93,7 +95,7 @@ func (s Storage) ShowMetrics(ctx context.Context) string {
 	}
 	result += "</table></span></html>"
 
-	return result
+	return result, nil
 }
 
 func (s Storage) GetMetric(ctx context.Context, mData *MetricData) (string, *errdefs.CustomError) {
@@ -151,8 +153,10 @@ func (s Storage) UpdateMetrics(ctx context.Context, m []models.MetricsDTO) (bool
 		return false, errdefs.NewNotFoundError("metric name required"), fmt.Errorf("metric name required")
 	}
 
-	res := s.storage.UpdateMetrics(ctx, m)
-	fmt.Println(res)
+	err := s.storage.UpdateMetrics(ctx, m)
+	if err != nil {
+		return false, nil, errdefs.NewBadRequestError("can't update metrics")
+	}
 	return true, nil, nil
 
 }
@@ -200,4 +204,8 @@ func (s Storage) UpdateMetric(ctx context.Context, mData *MetricData) (*models.M
 	default:
 		return nil, errdefs.NewBadRequestError("invalid counter metric type"), fmt.Errorf("invalid counter metric type")
 	}
+}
+
+func (s Storage) Ping() error {
+	return storage.PingDB()
 }

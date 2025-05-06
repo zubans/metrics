@@ -38,17 +38,16 @@ func main() {
 	}()
 
 	var memStorage = storage.NewMemStorage()
-	var dump = storage.NewDump(memStorage, *cfg)
+	var dump = storage.New(memStorage, *cfg)
 
 	var actualStorage services.MetricStorage
 
-	err := config.InitDB(cfg.DBCfg, "./migrations")
-	if err != nil {
-		logger.Log.Info("error init DB", zap.Any("error", err))
-	}
-
 	if cfg.DBCfg != "" {
-		actualStorage = storage.NewDB(config.DB)
+		err := storage.InitDB(cfg.DBCfg, "./migrations")
+		if err != nil {
+			logger.Log.Info("error init DB", zap.Any("error", err))
+		}
+		actualStorage = storage.NewDB(storage.DB)
 	} else {
 		if cfg.StoreInterval == 0 {
 			actualStorage = storage.NewAutoDump(memStorage, dump)
@@ -77,7 +76,7 @@ func main() {
 	}
 
 	var serv = services.NewMetricService(actualStorage)
-	var memHandler = handler.NewHandler(context.Background(), serv)
+	var memHandler = handler.NewHandler(serv)
 	r := router.GetRouter(memHandler)
 
 	if err := run(middlewares.RequestLogger(r)); err != nil {

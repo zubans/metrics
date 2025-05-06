@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"fmt"
 	"github.com/zubans/metrics/internal/models"
 	"sync"
 )
@@ -70,13 +69,28 @@ func (m *MemStorage) GetCounters(ctx context.Context) map[string]int64 {
 	return result
 }
 
-func (m *MemStorage) ShowMetrics(ctx context.Context) (map[string]float64, map[string]int64) {
+func (m *MemStorage) ShowMetrics(ctx context.Context) (map[string]float64, map[string]int64, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	return m.Gauges, m.Counters
+	return m.Gauges, m.Counters, nil
 }
 
 func (m *MemStorage) UpdateMetrics(ctx context.Context, mDTO []models.MetricsDTO) error {
-	return fmt.Errorf("forbidden")
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	for _, v := range mDTO {
+		switch v.MType {
+		case string(models.Counter):
+			if v.Delta != nil {
+				m.Counters[v.ID] += *v.Delta
+			}
+		case string(models.Gauge):
+			if v.Value != nil {
+				m.Gauges[v.ID] += *v.Value
+			}
+		}
+	}
+	return nil
 }

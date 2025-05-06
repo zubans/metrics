@@ -17,7 +17,7 @@ func NewAutoDump(storage *MemStorage, dump *Dump) *AutoStorage {
 }
 
 func (s *AutoStorage) UpdateGauge(ctx context.Context, name string, value float64) float64 {
-	res := s.dump.storage.UpdateGauge(ctx, name, value)
+	res := s.storage.UpdateGauge(ctx, name, value)
 	err := s.dump.SaveMetricToFile(ctx)
 	if err != nil {
 		log.Println("error save gauge to file")
@@ -27,7 +27,7 @@ func (s *AutoStorage) UpdateGauge(ctx context.Context, name string, value float6
 }
 
 func (s *AutoStorage) UpdateCounter(ctx context.Context, name string, value int64) int64 {
-	res := s.dump.storage.UpdateCounter(ctx, name, value)
+	res := s.storage.UpdateCounter(ctx, name, value)
 	err := s.dump.SaveMetricToFile(ctx)
 	if err != nil {
 		log.Println("error save counter to file")
@@ -37,10 +37,10 @@ func (s *AutoStorage) UpdateCounter(ctx context.Context, name string, value int6
 }
 
 func (s *AutoStorage) GetGauge(ctx context.Context, name string) (float64, bool) {
-	return s.dump.storage.GetGauge(ctx, name)
+	return s.storage.GetGauge(ctx, name)
 }
 func (s *AutoStorage) GetCounter(ctx context.Context, name string) (int64, bool) {
-	return s.dump.storage.GetCounter(ctx, name)
+	return s.storage.GetCounter(ctx, name)
 }
 func (s *AutoStorage) GetGauges(ctx context.Context) map[string]float64 {
 	return s.dump.storage.GetGauges(ctx)
@@ -48,8 +48,8 @@ func (s *AutoStorage) GetGauges(ctx context.Context) map[string]float64 {
 func (s *AutoStorage) GetCounters(ctx context.Context) map[string]int64 {
 	return s.dump.storage.GetCounters(ctx)
 }
-func (s *AutoStorage) ShowMetrics(ctx context.Context) (map[string]float64, map[string]int64) {
-	return s.dump.storage.ShowMetrics(ctx)
+func (s *AutoStorage) ShowMetrics(ctx context.Context) (map[string]float64, map[string]int64, error) {
+	return s.storage.ShowMetrics(ctx)
 }
 
 func (s *AutoStorage) UpdateMetrics(ctx context.Context, m []models.MetricsDTO) error {

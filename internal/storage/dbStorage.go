@@ -3,16 +3,14 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"github.com/zubans/metrics/internal/models"
 	"log"
-	"sync"
 	"time"
 )
 
 type PostDB struct {
-	db    *sql.DB
-	mutex sync.Mutex
+	db   *sql.DB
+	dump *Dump
 }
 
 func NewDB(db *sql.DB) *PostDB {
@@ -20,9 +18,6 @@ func NewDB(db *sql.DB) *PostDB {
 }
 
 func (db *PostDB) UpdateGauge(ctx context.Context, name string, value float64) float64 {
-	db.mutex.Lock()
-	defer db.mutex.Unlock()
-
 	_, err := db.db.ExecContext(ctx, "INSERT INTO metrics (type, name, value, timestamp) VALUES ($1, $2, $3, $4) ON CONFLICT (name, type) DO UPDATE SET value = $3", models.Gauge, name, value, time.Now())
 
 	if err != nil {
@@ -33,10 +28,7 @@ func (db *PostDB) UpdateGauge(ctx context.Context, name string, value float64) f
 }
 
 func (db *PostDB) UpdateCounter(ctx context.Context, name string, value int64) int64 {
-	db.mutex.Lock()
-	defer db.mutex.Unlock()
-
-	_, err := db.db.ExecContext(ctx, "INSERT INTO metrics (type, name, delta, timestamp) VALUES ($1, $2, $3, $4) ON CONFLICT (name, type) DO UPDATE SET delta = $3", models.Counter, name, value, time.Now())
+	_, err := db.db.ExecContext(ctx, "INSERT INTO metrics (type, name, delta, timestamp) VALUES ($1, $2, $3, $4) ON CONFLICT (name, type) DO UPDATE SET delta = metrics.delta + EXCLUDED.delta, timestamp = EXCLUDED.timestamp", models.Counter, name, value, time.Now())
 
 	if err != nil {
 		log.Println("error insert metric: ", err)
@@ -46,9 +38,6 @@ func (db *PostDB) UpdateCounter(ctx context.Context, name string, value int64) i
 }
 
 func (db *PostDB) UpdateMetrics(ctx context.Context, m []models.MetricsDTO) error {
-	db.mutex.Lock()
-	defer db.mutex.Unlock()
-
 	tx, err := db.db.Begin()
 	if err != nil {
 		log.Println("error create transaction:", err)
@@ -127,35 +116,7 @@ func (db *PostDB) GetCounter(ctx context.Context, name string) (int64, bool) {
 	return *m.Delta, true
 }
 
-func (db *PostDB) GetGauges(ctx context.Context) map[string]float64 {
-	var m models.MetricsDTO
-
-	row := db.db.QueryRowContext(ctx, "select * from metrics where type = $1", models.Gauge)
-
-	err := row.Scan(&m)
-	if err != nil {
-		log.Println("error get gauge metric: ", err)
-		return nil
-	}
-
-	return nil
-}
-
-func (db *PostDB) GetCounters(ctx context.Context) map[string]int64 {
-	var m models.MetricsDTO
-
-	row := db.db.QueryRowContext(ctx, "select * from metrics where name = $1", models.Counter)
-
-	err := row.Scan(&m)
-	if err != nil {
-		log.Println("error get gauge metric: ", err)
-		return nil
-	}
-
-	return nil
-}
-
-func (db *PostDB) ShowMetrics(ctx context.Context) (map[string]float64, map[string]int64) {
+func (db *PostDB) ShowMetrics(ctx context.Context) (map[string]float64, map[string]int64, error) {
 	gauges := make(map[string]float64)
 	counters := make(map[string]int64)
 
@@ -179,8 +140,9 @@ func (db *PostDB) ShowMetrics(ctx context.Context) (map[string]float64, map[stri
 			delta       sql.NullInt64
 		)
 
-		if errors.Is(err, rows.Scan(&name, &metricType, &metricValue, &delta)); err != nil {
-			log.Println("Error scanning row:", err)
+		err := rows.Scan(&name, &metricType, &metricValue, &delta)
+		if err != nil {
+			log.Printf("DATA LAYER: storage.postgres.GetAllMetrics: rows.Scan error: %v", err)
 			continue
 		}
 
@@ -195,5 +157,5 @@ func (db *PostDB) ShowMetrics(ctx context.Context) (map[string]float64, map[stri
 		}
 	}
 
-	return gauges, counters
+	return gauges, counters, nil
 }

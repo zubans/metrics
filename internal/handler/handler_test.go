@@ -15,7 +15,7 @@ import (
 func TestHandler_UpdateMetricJSON(t *testing.T) {
 	newMemStorage := storage.NewMemStorage()
 	newService := services.NewMetricService(newMemStorage)
-	handler := NewHandler(context.Background(), newService)
+	handler := NewHandler(newService)
 	tests := []struct {
 		name                string
 		requestData         string
@@ -69,7 +69,7 @@ func TestHandler_UpdateMetricJSON(t *testing.T) {
 func TestHandler_UpdateMetric(t *testing.T) {
 	newMemStorage := storage.NewMemStorage()
 	newService := services.NewMetricService(newMemStorage)
-	handler := NewHandler(context.Background(), newService)
+	handler := NewHandler(newService)
 
 	tests := []struct {
 		name               string
