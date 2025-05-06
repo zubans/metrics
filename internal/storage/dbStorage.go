@@ -36,7 +36,7 @@ func (db *PostDB) UpdateCounter(ctx context.Context, name string, value int64) i
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
-	_, err := db.db.ExecContext(ctx, "INSERT INTO metrics (type, name, delta, timestamp) VALUES ($1, $2, $3, $4) ON CONFLICT (name, type) DO UPDATE SET delta = $3", models.Counter, name, value, time.Now())
+	_, err := db.db.ExecContext(ctx, "INSERT INTO metrics (type, name, delta, timestamp) VALUES ($1, $2, $3, $4) ON CONFLICT (name, type) DO UPDATE SET delta = metrics.delta + EXCLUDED.delta, timestamp = EXCLUDED.timestamp", models.Counter, name, value, time.Now())
 
 	if err != nil {
 		log.Println("error insert metric: ", err)

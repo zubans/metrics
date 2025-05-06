@@ -42,12 +42,11 @@ func main() {
 
 	var actualStorage services.MetricStorage
 
-	err := config.InitDB(cfg.DBCfg, "./migrations")
-	if err != nil {
-		logger.Log.Info("error init DB", zap.Any("error", err))
-	}
-
 	if cfg.DBCfg != "" {
+		err := config.InitDB(cfg.DBCfg, "./migrations")
+		if err != nil {
+			logger.Log.Info("error init DB", zap.Any("error", err))
+		}
 		actualStorage = storage.NewDB(config.DB)
 	} else {
 		if cfg.StoreInterval == 0 {
