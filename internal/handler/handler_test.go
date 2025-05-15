@@ -5,6 +5,7 @@ import (
 	"context"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/zubans/metrics/internal/config"
 	"github.com/zubans/metrics/internal/services"
 	"github.com/zubans/metrics/internal/storage"
 	"net/http"
@@ -12,10 +13,13 @@ import (
 	"testing"
 )
 
+var CFG *config.Config
+
 func TestHandler_UpdateMetricJSON(t *testing.T) {
 	newMemStorage := storage.NewMemStorage()
-	newService := services.NewMetricService(newMemStorage)
-	handler := NewHandler(newService)
+	newService := services.New(newMemStorage)
+	CFG = config.NewServerConfig()
+	handler := New(newService, CFG)
 	tests := []struct {
 		name                string
 		requestData         string
@@ -68,8 +72,10 @@ func TestHandler_UpdateMetricJSON(t *testing.T) {
 
 func TestHandler_UpdateMetric(t *testing.T) {
 	newMemStorage := storage.NewMemStorage()
-	newService := services.NewMetricService(newMemStorage)
-	handler := NewHandler(newService)
+	newService := services.New(newMemStorage)
+	CFG = config.NewServerConfig()
+
+	handler := New(newService, CFG)
 
 	tests := []struct {
 		name               string
