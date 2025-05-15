@@ -17,6 +17,7 @@ type Config struct {
 	FileStoragePath string        `env:"FILE_STORAGE_PATH"`
 	Restore         bool          `env:"RESTORE"`
 	DBCfg           string        `env:"DATABASE_DSN"`
+	Key             string        `env:"KEY"`
 }
 
 func NewServerConfig() *Config {
@@ -27,6 +28,7 @@ func NewServerConfig() *Config {
 	var storeInterval int
 	var storagePath string
 	var isRestore bool
+	var key string
 
 	flag.StringVar(&addr, "a", "localhost:8080", "address and port to run server")
 	flag.StringVar(&flagLogLevel, "l", "info", "log level")
@@ -34,6 +36,7 @@ func NewServerConfig() *Config {
 	flag.StringVar(&storagePath, "f", "metric_storage.json", "file storage path")
 	flag.StringVar(&db, "d", "", "db credential")
 	flag.BoolVar(&isRestore, "r", true, "bool value. Ability to restore metrics from file")
+	flag.StringVar(&key, "k", "", "hash key")
 
 	flag.Parse()
 

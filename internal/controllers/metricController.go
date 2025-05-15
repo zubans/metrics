@@ -3,6 +3,9 @@ package controllers
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/go-resty/resty/v2"
@@ -59,6 +62,7 @@ func (mc *MetricsController) JSONSendMetrics() {
 	}
 
 	var buf bytes.Buffer
+	var hash []byte
 
 	gz := gzipNewWriter(&buf)
 
@@ -74,7 +78,7 @@ func (mc *MetricsController) JSONSendMetrics() {
 		return
 	}
 
-	response, err := mc.httpClient.
+	request := mc.httpClient.
 		SetRetryCount(3).
 		SetRetryWaitTime(1*time.Second).
 		SetRetryMaxWaitTime(5*time.Second).
@@ -89,11 +93,19 @@ func (mc *MetricsController) JSONSendMetrics() {
 		R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
-		SetBody(buf.Bytes()).
-		Post(url)
+		SetBody(buf.Bytes())
+
+	if mc.metricsService.Cfg.Key != "" {
+		h := hmac.New(sha256.New, []byte(mc.metricsService.Cfg.Key))
+		h.Write(body)
+		hash = h.Sum(nil)
+		request.SetHeader("HashSHA256", hex.EncodeToString(hash))
+	}
+
+	response, err := request.Post(url)
 
 	if err != nil {
-		log.Printf("Error sending metric: %v. BODY: %v\n", err, metrics)
+		log.Printf("Error sending metric: %v. BODY: %v. HASH: %v\n", err, metrics, hex.EncodeToString(hash))
 		return
 	}
 
@@ -140,7 +152,7 @@ func (mc *MetricsController) OldJSONSendMetrics() {
 		response, err := mc.httpClient.R().
 			SetHeader("Content-Type", "application/json").
 			SetHeader("Content-Encoding", "gzip").
-			SetBody(dtoMetrics).
+			SetBody(buf.Bytes()).
 			Post(url)
 		if err != nil {
 			log.Printf("Error sending metric %s: %v. BODY: %v\n", metric.ID, err, metric)

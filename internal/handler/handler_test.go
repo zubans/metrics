@@ -5,17 +5,32 @@ import (
 	"context"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/zubans/metrics/internal/config"
 	"github.com/zubans/metrics/internal/services"
 	"github.com/zubans/metrics/internal/storage"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 )
 
+var (
+	CFG  *config.Config
+	once sync.Once
+)
+
+func getTestConfig() *config.Config {
+	once.Do(func() {
+		CFG = config.NewServerConfig()
+	})
+	return CFG
+}
+
 func TestHandler_UpdateMetricJSON(t *testing.T) {
 	newMemStorage := storage.NewMemStorage()
-	newService := services.NewMetricService(newMemStorage)
-	handler := NewHandler(newService)
+	newService := services.New(newMemStorage)
+	CFG = getTestConfig()
+	handler := New(newService, CFG)
 	tests := []struct {
 		name                string
 		requestData         string
@@ -68,8 +83,10 @@ func TestHandler_UpdateMetricJSON(t *testing.T) {
 
 func TestHandler_UpdateMetric(t *testing.T) {
 	newMemStorage := storage.NewMemStorage()
-	newService := services.NewMetricService(newMemStorage)
-	handler := NewHandler(newService)
+	newService := services.New(newMemStorage)
+	CFG = getTestConfig()
+
+	handler := New(newService, CFG)
 
 	tests := []struct {
 		name               string

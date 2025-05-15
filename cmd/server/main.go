@@ -75,8 +75,8 @@ func main() {
 		}
 	}
 
-	var serv = services.NewMetricService(actualStorage)
-	var memHandler = handler.NewHandler(serv)
+	var serv = services.New(actualStorage)
+	var memHandler = handler.New(serv, cfg)
 	r := router.GetRouter(memHandler)
 
 	if err := run(middlewares.RequestLogger(r)); err != nil {
