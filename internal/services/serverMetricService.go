@@ -206,6 +206,6 @@ func (s Storage) UpdateMetric(ctx context.Context, mData *MetricData) (*models.M
 	}
 }
 
-func (s Storage) Ping() error {
-	return storage.PingDB()
+func (s Storage) Ping(ctx context.Context) error {
+	return storage.PingDB(ctx)
 }

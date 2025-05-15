@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -84,6 +85,6 @@ func isConnectionError(err error) bool {
 	return false
 }
 
-func PingDB() error {
+func PingDB(ctx context.Context) error {
 	return DB.Ping()
 }

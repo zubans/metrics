@@ -21,7 +21,7 @@ type ServerMetricService interface {
 	GetMetric(ctx context.Context, mData *services.MetricData) (string, *errdefs.CustomError)
 	GetJSONMetric(ctx context.Context, jsonData *models.MetricsDTO) ([]byte, *errdefs.CustomError)
 	ShowMetrics(ctx context.Context) (string, error)
-	Ping() error
+	Ping(ctx context.Context) error
 }
 
 type Handler struct {
@@ -263,7 +263,7 @@ func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
 }
 
 func (h *Handler) PingServer(w http.ResponseWriter, r *http.Request) {
-	err := h.service.Ping()
+	err := h.service.Ping(r.Context())
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
