@@ -152,7 +152,7 @@ func (mc *MetricsController) OldJSONSendMetrics() {
 		response, err := mc.httpClient.R().
 			SetHeader("Content-Type", "application/json").
 			SetHeader("Content-Encoding", "gzip").
-			SetBody(dtoMetrics).
+			SetBody(buf.Bytes()).
 			Post(url)
 		if err != nil {
 			log.Printf("Error sending metric %s: %v. BODY: %v\n", metric.ID, err, metric)

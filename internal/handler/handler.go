@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -80,6 +81,7 @@ func (h *Handler) UpdateMetrics(w http.ResponseWriter, r *http.Request) {
 			writeJSONError(w, "can't read body", http.StatusBadRequest)
 			return
 		}
+		r.Body = io.NopCloser(bytes.NewBuffer(b))
 
 		h := hmac.New(sha256.New, []byte(h.cfg.Key))
 		h.Write(b)
@@ -275,17 +277,6 @@ func (h *Handler) ShowMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-
-	resp := map[string]string{
-		"error": message,
-	}
-
-	_ = json.NewEncoder(w).Encode(resp)
-}
-
 func (h *Handler) PingServer(w http.ResponseWriter, r *http.Request) {
 	err := h.service.Ping(r.Context())
 	if err != nil {
@@ -300,4 +291,15 @@ func (h *Handler) PingServer(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
+}
+
+func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+
+	resp := map[string]string{
+		"error": message,
+	}
+
+	_ = json.NewEncoder(w).Encode(resp)
 }
