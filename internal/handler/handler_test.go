@@ -10,15 +10,26 @@ import (
 	"github.com/zubans/metrics/internal/storage"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 )
 
-var CFG *config.Config
+var (
+	CFG  *config.Config
+	once sync.Once
+)
+
+func getTestConfig() *config.Config {
+	once.Do(func() {
+		CFG = config.NewServerConfig()
+	})
+	return CFG
+}
 
 func TestHandler_UpdateMetricJSON(t *testing.T) {
 	newMemStorage := storage.NewMemStorage()
 	newService := services.New(newMemStorage)
-	CFG = config.NewServerConfig()
+	CFG = getTestConfig()
 	handler := New(newService, CFG)
 	tests := []struct {
 		name                string
@@ -73,7 +84,7 @@ func TestHandler_UpdateMetricJSON(t *testing.T) {
 func TestHandler_UpdateMetric(t *testing.T) {
 	newMemStorage := storage.NewMemStorage()
 	newService := services.New(newMemStorage)
-	CFG = config.NewServerConfig()
+	CFG = getTestConfig()
 
 	handler := New(newService, CFG)
 
