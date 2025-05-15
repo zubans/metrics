@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"github.com/go-resty/resty/v2"
 	"io"
 	"log"
 	"net/http"
@@ -38,28 +39,29 @@ func TestMetricsController_JSONSendMetrics(t *testing.T) {
 
 		gz, err := gzip.NewReader(r.Body)
 		require.NoError(t, err)
+
 		defer gz.Close()
 
 		body, err := io.ReadAll(gz)
 		require.NoError(t, err)
 
-		var metric models.MetricsDTO
+		var metric []models.MetricsDTO
 		err = json.Unmarshal(body, &metric)
 		require.NoError(t, err)
 
-		assert.Contains(t, []string{"gauge", "counter"}, metric.MType)
-		assert.NotEmpty(t, metric.ID)
+		assert.Contains(t, []string{"gauge", "counter"}, metric[0].MType)
+		assert.NotEmpty(t, metric[0].ID)
 
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
 
-	cfg.AddressServer = server.URL[7:] // убираем "http://"
+	cfg.AddressServer = server.URL[7:] //убираем "http://"
 
 	service := services.NewMetricsService(cfg)
 	controller := &MetricsController{
 		metricsService: service,
-		httpClient:     &http.Client{},
+		httpClient:     resty.New(),
 	}
 
 	t.Run("CollectMetrics populates metrics", func(t *testing.T) {
@@ -91,11 +93,10 @@ func TestMetricsController_JSONSendMetrics(t *testing.T) {
 
 	t.Run("Error handling", func(t *testing.T) {
 		mc := NewMetricsController(service)
-		mc.httpClient = &http.Client{
-			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		mc.httpClient.
+			SetTransport(roundTripFunc(func(req *http.Request) (*http.Response, error) {
 				return nil, fmt.Errorf("connection refused")
-			}),
-		}
+			}))
 
 		logBuffer := bytes.NewBuffer(nil)
 		log.SetOutput(logBuffer)
@@ -119,11 +120,7 @@ func TestErrorScenarios(t *testing.T) {
 	service := services.NewMetricsService(cfg)
 	controller := &MetricsController{
 		metricsService: service,
-		httpClient: &http.Client{
-			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-				return nil, fmt.Errorf("connection refused")
-			}),
-		},
+		httpClient:     resty.New(),
 	}
 
 	controller.UpdateMetrics()

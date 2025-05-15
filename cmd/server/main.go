@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"github.com/zubans/metrics/internal/config"
 	"github.com/zubans/metrics/internal/handler"
 	"github.com/zubans/metrics/internal/logger"
@@ -35,26 +36,36 @@ func main() {
 
 		}
 	}()
+
 	var memStorage = storage.NewMemStorage()
-	var dump = storage.NewDump(memStorage, *cfg)
+	var dump = storage.New(memStorage, *cfg)
 
 	var actualStorage services.MetricStorage
-	if cfg.StoreInterval == 0 {
-		actualStorage = storage.NewAutoDump(memStorage, dump)
-	} else {
-		actualStorage = memStorage
-		go func() {
-			ticker := time.NewTicker(cfg.StoreInterval)
-			defer ticker.Stop()
 
-			for range ticker.C {
-				if err := dump.SaveMetricToFile(); err != nil {
-					logger.Log.Info("error save to file", zap.Any("error", err))
-				} else {
-					logger.Log.Info("metrics saved to file successfully")
+	if cfg.DBCfg != "" {
+		err := storage.InitDB(cfg.DBCfg, "./migrations")
+		if err != nil {
+			logger.Log.Info("error init DB", zap.Any("error", err))
+		}
+		actualStorage = storage.NewDB(storage.DB)
+	} else {
+		if cfg.StoreInterval == 0 {
+			actualStorage = storage.NewAutoDump(memStorage, dump)
+		} else {
+			actualStorage = memStorage
+			go func() {
+				ticker := time.NewTicker(cfg.StoreInterval)
+				defer ticker.Stop()
+
+				for range ticker.C {
+					if err := dump.SaveMetricToFile(context.Background()); err != nil {
+						logger.Log.Info("error save to file", zap.Any("error", err))
+					} else {
+						logger.Log.Info("metrics saved to file successfully")
+					}
 				}
-			}
-		}()
+			}()
+		}
 	}
 
 	if cfg.Restore {
@@ -74,7 +85,7 @@ func main() {
 
 	defer func() {
 		logger.Log.Info("Saving metrics before shutdown...")
-		if err := dump.SaveMetricToFile(); err != nil {
+		if err := dump.SaveMetricToFile(context.Background()); err != nil {
 			logger.Log.Info("failed to save metrics: ", zap.Any("error", err))
 		} else {
 			logger.Log.Info("Metrics saved.")
