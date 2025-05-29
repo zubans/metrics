@@ -36,7 +36,7 @@ func NewMetricsService(cfg *config.AgentConfig) *MetricsService {
 func (ms *MetricsService) startCPUMonitoring() {
 	for {
 		percent, err := cpu.Percent(time.Second, false)
-		if err == nil && len(percent) > 0 {
+		if err == nil {
 			ms.mu.Lock()
 			ms.cpuUtilization = percent[0]
 			ms.mu.Unlock()

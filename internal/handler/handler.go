@@ -1,11 +1,7 @@
 package handler
 
 import (
-	"bytes"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"github.com/go-chi/chi/v5"
@@ -31,11 +27,11 @@ type ServerMetricService interface {
 
 type Handler struct {
 	service ServerMetricService
-	cfg     *config.Config
+	Cfg     *config.Config
 }
 
 func New(service ServerMetricService, cfg *config.Config) *Handler {
-	return &Handler{service: service, cfg: cfg}
+	return &Handler{service: service, Cfg: cfg}
 }
 
 func (h *Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
@@ -72,26 +68,6 @@ func (h *Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateMetrics(w http.ResponseWriter, r *http.Request) {
 	var m []models.MetricsDTO
 	ctx := r.Context()
-
-	hash := r.Header.Get("HashSHA256")
-
-	if hash != "" {
-		b, err := io.ReadAll(r.Body)
-		if err != nil {
-			writeJSONError(w, "can't read body", http.StatusBadRequest)
-			return
-		}
-		r.Body = io.NopCloser(bytes.NewBuffer(b))
-
-		h := hmac.New(sha256.New, []byte(h.cfg.Key))
-		h.Write(b)
-		etolon := h.Sum(nil)
-
-		if hex.EncodeToString(etolon) != hash {
-			writeJSONError(w, "incorrect header hash", http.StatusBadRequest)
-			return
-		}
-	}
 
 	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
 		writeJSONError(w, "invalid input: "+err.Error(), http.StatusBadRequest)

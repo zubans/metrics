@@ -88,7 +88,7 @@ func TestMetricsController_JSONSendMetrics(t *testing.T) {
 		controller.JSONSendMetrics()
 
 		metrics := controller.metricsService.GetMetrics()
-		assert.Len(t, metrics.MetricList, 29)
+		assert.Len(t, metrics.MetricList, 32)
 	})
 
 	t.Run("Error handling", func(t *testing.T) {

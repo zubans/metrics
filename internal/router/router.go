@@ -12,7 +12,8 @@ func GetRouter(h *handler.Handler) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Compress(5, "text/html", "application/json"))
 
-	r.With(middlewares.GzipMiddleware).Post("/updates/", h.UpdateMetrics)
+	r.With(middlewares.GzipMiddleware,
+		middlewares.HashCheck(h.Cfg.Key)).Post("/updates/", h.UpdateMetrics)
 	r.With(middlewares.GzipMiddleware).Post("/update/", h.UpdateMetricJSON)
 
 	r.With(middlewares.GzipMiddleware).Get("/", h.ShowMetrics)

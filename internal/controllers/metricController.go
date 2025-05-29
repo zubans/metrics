@@ -13,7 +13,6 @@ import (
 	"github.com/zubans/metrics/internal/services"
 	"io"
 	"log"
-	"net/http"
 	"time"
 )
 
@@ -61,24 +60,15 @@ func (mc *MetricsController) JSONSendMetrics() {
 		return
 	}
 
-	var buf bytes.Buffer
 	var hash []byte
 
-	gz := gzipNewWriter(&buf)
-
-	_, err = gz.Write(body)
+	buf, err := mc.compressData(body)
 	if err != nil {
-		log.Println("Error compressing metric data")
+		log.Println("Error compress metric data")
 		return
 	}
 
-	err = gz.Close()
-	if err != nil {
-		log.Println("Error close gzip compressor")
-		return
-	}
-
-	request := mc.httpClient.
+	req := mc.httpClient.
 		SetRetryCount(3).
 		SetRetryWaitTime(1*time.Second).
 		SetRetryMaxWaitTime(5*time.Second).
@@ -96,13 +86,11 @@ func (mc *MetricsController) JSONSendMetrics() {
 		SetBody(buf.Bytes())
 
 	if mc.metricsService.Cfg.Key != "" {
-		h := hmac.New(sha256.New, []byte(mc.metricsService.Cfg.Key))
-		h.Write(body)
-		hash = h.Sum(nil)
-		request.SetHeader("HashSHA256", hex.EncodeToString(hash))
+		h := mc.calculateHash(body, mc.metricsService.Cfg.Key)
+		req.SetHeader("HashSHA256", h)
 	}
 
-	response, err := request.Post(url)
+	response, err := req.Post(url)
 
 	if err != nil {
 		log.Printf("Error sending metric: %v. BODY: %v. HASH: %v\n", err, metrics, hex.EncodeToString(hash))
@@ -116,53 +104,25 @@ func (mc *MetricsController) JSONSendMetrics() {
 	}
 }
 
-func (mc *MetricsController) OldJSONSendMetrics() {
-	metrics := mc.metricsService.GetMetrics()
-	dtoMetrics := models.ConvertMetricsListToDTO(metrics.MetricList)
+func (mc *MetricsController) compressData(body []byte) (*bytes.Buffer, error) {
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
 
-	url := fmt.Sprintf("http://%s/update/", mc.metricsService.Cfg.AddressServer)
-
-	for _, metric := range dtoMetrics {
-		b, err := json.Marshal(metric)
-		if err != nil {
-			log.Printf("Error json encode metric data")
-		}
-
-		var buf bytes.Buffer
-
-		gz := gzipNewWriter(&buf)
-
-		_, err = gz.Write(b)
-		if err != nil {
-			log.Println("Error compressing metric data")
-			return
-		}
-
-		err = gz.Close()
-		if err != nil {
-			log.Println("Error close gzip compressor")
-			return
-		}
-
-		req, _ := http.NewRequest("POST", url, &buf)
-
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Content-Encoding", "gzip")
-
-		response, err := mc.httpClient.R().
-			SetHeader("Content-Type", "application/json").
-			SetHeader("Content-Encoding", "gzip").
-			SetBody(buf.Bytes()).
-			Post(url)
-		if err != nil {
-			log.Printf("Error sending metric %s: %v. BODY: %v\n", metric.ID, err, metric)
-			continue
-		}
-
-		if response.IsSuccess() {
-			log.Printf("Successfully sent metric: %s\n", metric.ID)
-		} else {
-			log.Printf("Failed to send metric: %s, status code: %d\n", metric.ID, response.StatusCode())
-		}
+	if _, err := gz.Write(body); err != nil {
+		log.Println("Error compressing metric data:", err)
+		return nil, err
 	}
+
+	if err := gz.Close(); err != nil {
+		log.Println("Error closing gzip compressor:", err)
+		return nil, err
+	}
+
+	return &buf, nil
+}
+
+func (mc *MetricsController) calculateHash(body []byte, key string) string {
+	h := hmac.New(sha256.New, []byte(key))
+	h.Write(body)
+	return hex.EncodeToString(h.Sum(nil))
 }
