@@ -29,18 +29,26 @@ func main() {
 
 func run(metricsController *controllers.MetricsController, cfg *config.AgentConfig) {
 	go func() {
-		for {
+		ticker := time.NewTicker(cfg.PollInterval)
+		for range ticker.C {
 			metricsController.UpdateMetrics()
-			time.Sleep(cfg.PollInterval)
 		}
 	}()
 
-	go func() {
-		for {
-			time.Sleep(cfg.SendInterval)
+	jobs := make(chan struct{})
 
-			metricsController.OldJSONSendMetrics()
-			metricsController.JSONSendMetrics()
+	for i := 0; i < cfg.RateLimit; i++ {
+		go func() {
+			for range jobs {
+				metricsController.JSONSendMetrics()
+			}
+		}()
+	}
+
+	go func() {
+		ticker := time.NewTicker(cfg.SendInterval)
+		for range ticker.C {
+			jobs <- struct{}{}
 		}
 	}()
 }

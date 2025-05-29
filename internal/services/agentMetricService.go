@@ -1,10 +1,14 @@
 package services
 
 import (
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/zubans/metrics/internal/config"
 	"github.com/zubans/metrics/internal/models"
 	"math/rand"
 	"runtime"
+	"sync"
+	"time"
 )
 
 type MetricsCollector interface {
@@ -13,24 +17,57 @@ type MetricsCollector interface {
 }
 
 type MetricsService struct {
-	metrics *models.Metrics
-	Cfg     *config.AgentConfig
+	metrics        *models.Metrics
+	Cfg            *config.AgentConfig
+	cpuUtilization float64
+	mu             sync.Mutex
 }
 
 func NewMetricsService(cfg *config.AgentConfig) *MetricsService {
-	return &MetricsService{
+	ms := &MetricsService{
 		metrics: &models.Metrics{},
 		Cfg:     cfg,
+	}
+	go ms.startCPUMonitoring()
+
+	return ms
+}
+
+func (ms *MetricsService) startCPUMonitoring() {
+	for {
+		percent, err := cpu.Percent(time.Second, false)
+		if err == nil {
+			ms.mu.Lock()
+			ms.cpuUtilization = percent[0]
+			ms.mu.Unlock()
+		}
+		time.Sleep(time.Second)
 	}
 }
 
 func (ms *MetricsService) CollectMetrics() {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
+
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 
 	ms.metrics.PollCount++
 
 	ms.addMetrics(memStats)
+
+	if v, err := mem.VirtualMemory(); err == nil {
+		total, free := int64(v.Total), int64(v.Free)
+		ms.metrics.MetricList = append(ms.metrics.MetricList,
+			models.Metric{Name: "TotalMemory", Type: "gauge", Value: int(total)},
+			models.Metric{Name: "FreeMemory", Type: "gauge", Value: int(free)},
+		)
+	}
+
+	cpuValue := ms.cpuUtilization
+	ms.metrics.MetricList = append(ms.metrics.MetricList,
+		models.Metric{Name: "CPUtilization", Type: "gauge", Value: int(cpuValue)},
+	)
 }
 
 func (ms *MetricsService) addMetrics(m runtime.MemStats) {

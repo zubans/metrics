@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/go-chi/chi/v5"
+	"github.com/zubans/metrics/internal/config"
 	"github.com/zubans/metrics/internal/errdefs"
 	"github.com/zubans/metrics/internal/logger"
 	"github.com/zubans/metrics/internal/models"
@@ -26,10 +27,11 @@ type ServerMetricService interface {
 
 type Handler struct {
 	service ServerMetricService
+	Cfg     *config.Config
 }
 
-func NewHandler(service ServerMetricService) *Handler {
-	return &Handler{service: service}
+func New(service ServerMetricService, cfg *config.Config) *Handler {
+	return &Handler{service: service, Cfg: cfg}
 }
 
 func (h *Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
@@ -251,17 +253,6 @@ func (h *Handler) ShowMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-
-	resp := map[string]string{
-		"error": message,
-	}
-
-	_ = json.NewEncoder(w).Encode(resp)
-}
-
 func (h *Handler) PingServer(w http.ResponseWriter, r *http.Request) {
 	err := h.service.Ping(r.Context())
 	if err != nil {
@@ -276,4 +267,15 @@ func (h *Handler) PingServer(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
+}
+
+func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+
+	resp := map[string]string{
+		"error": message,
+	}
+
+	_ = json.NewEncoder(w).Encode(resp)
 }
