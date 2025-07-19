@@ -1,22 +1,26 @@
 package services
 
 import (
-	"github.com/zubans/metrics/internal/config"
-	"github.com/zubans/metrics/internal/models"
 	"math/rand"
 	"runtime"
+
+	"github.com/zubans/metrics/internal/config"
+	"github.com/zubans/metrics/internal/models"
 )
 
+// MetricsCollector определяет интерфейс для сбора и получения метрик.
 type MetricsCollector interface {
 	CollectMetrics()
 	GetMetrics() *models.Metrics
 }
 
+// MetricsService реализует сбор и хранение метрик агента.
 type MetricsService struct {
 	metrics *models.Metrics
 	Cfg     *config.AgentConfig
 }
 
+// NewMetricsService создаёт новый сервис сбора метрик.
 func NewMetricsService(cfg *config.AgentConfig) *MetricsService {
 	return &MetricsService{
 		metrics: &models.Metrics{},
@@ -24,6 +28,7 @@ func NewMetricsService(cfg *config.AgentConfig) *MetricsService {
 	}
 }
 
+// CollectMetrics собирает метрики из runtime и обновляет внутреннее состояние.
 func (ms *MetricsService) CollectMetrics() {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)

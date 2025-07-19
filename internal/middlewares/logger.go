@@ -2,11 +2,12 @@ package middlewares
 
 import (
 	"bytes"
-	"github.com/zubans/metrics/internal/logger"
-	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/zubans/metrics/internal/logger"
+	"go.uber.org/zap"
 )
 
 type (

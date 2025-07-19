@@ -4,34 +4,45 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"net/http"
+	"strconv"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/zubans/metrics/internal/errdefs"
 	"github.com/zubans/metrics/internal/logger"
 	"github.com/zubans/metrics/internal/models"
 	"github.com/zubans/metrics/internal/services"
 	"go.uber.org/zap"
-	"io"
-	"net/http"
-	"strconv"
 )
 
+// ServerMetricService описывает сервис для работы с метриками на сервере.
 type ServerMetricService interface {
+	// UpdateMetric обновляет одну метрику.
 	UpdateMetric(ctx context.Context, mData *services.MetricData) (*models.MetricsDTO, *errdefs.CustomError, error)
+	// UpdateMetrics обновляет несколько метрик.
 	UpdateMetrics(ctx context.Context, m []models.MetricsDTO) (bool, *errdefs.CustomError, error)
+	// GetMetric возвращает значение метрики.
 	GetMetric(ctx context.Context, mData *services.MetricData) (string, *errdefs.CustomError)
+	// GetJSONMetric возвращает метрику в формате JSON.
 	GetJSONMetric(ctx context.Context, jsonData *models.MetricsDTO) ([]byte, *errdefs.CustomError)
+	// ShowMetrics возвращает все метрики в виде строки.
 	ShowMetrics(ctx context.Context) (string, error)
+	// Ping проверяет доступность сервиса.
 	Ping(ctx context.Context) error
 }
 
+// Handler реализует HTTP-обработчики для работы с метриками.
 type Handler struct {
 	service ServerMetricService
 }
 
+// NewHandler создаёт новый Handler с переданным сервисом.
 func NewHandler(service ServerMetricService) *Handler {
 	return &Handler{service: service}
 }
 
+// UpdateMetric HTTP-обработчик для обновления одной метрики.
 func (h *Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	v := chi.URLParam(r, "value")

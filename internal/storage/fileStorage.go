@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/zubans/metrics/internal/config"
 	"log"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/zubans/metrics/internal/config"
 )
 
 const (
@@ -22,30 +23,36 @@ var retryDelays = []time.Duration{
 	5 * time.Second,
 }
 
+// PersistentStorage определяет интерфейс для сохранения и загрузки метрик из файла.
 type PersistentStorage interface {
 	SaveMetricToFile() error
 	LoadMetricsFromFile() error
 }
 
+// GetterMetrics определяет интерфейс для получения метрик.
 type GetterMetrics interface {
 	GetGauges(ctx context.Context) map[string]float64
 	GetCounters(ctx context.Context) map[string]int64
 }
 
+// Dump реализует сохранение и загрузку метрик в файл.
 type Dump struct {
 	storage GetterMetrics
 	cfg     *config.Config
 }
 
+// MetricsDump — структура для сериализации метрик в файл.
 type MetricsDump struct {
 	Gauges   map[string]float64 `json:"gauges"`
 	Counters map[string]int64   `json:"counters"`
 }
 
+// New создаёт новый объект Dump для работы с файлом метрик.
 func New(storage GetterMetrics, cfg config.Config) *Dump {
 	return &Dump{storage: storage, cfg: &cfg}
 }
 
+// SaveMetricToFile сохраняет метрики в файл с повторными попытками при ошибках.
 func (d *Dump) SaveMetricToFile(ctx context.Context) error {
 	dump := MetricsDump{
 		Gauges:   d.storage.GetGauges(ctx),
@@ -74,6 +81,7 @@ func (d *Dump) SaveMetricToFile(ctx context.Context) error {
 	return fmt.Errorf("error open file")
 }
 
+// LoadMetricsFromFile загружает метрики из файла.
 func (d *Dump) LoadMetricsFromFile() error {
 	var res []byte
 	var err error

@@ -1,11 +1,12 @@
 package main
 
 import (
+	"log"
+	"time"
+
 	"github.com/zubans/metrics/internal/config"
 	"github.com/zubans/metrics/internal/controllers"
 	"github.com/zubans/metrics/internal/services"
-	"log"
-	"time"
 )
 
 func main() {

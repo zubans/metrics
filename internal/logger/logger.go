@@ -1,10 +1,11 @@
 package logger
 
 import (
+	"os"
+
 	"github.com/stretchr/testify/assert/yaml"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"os"
 )
 
 var Log = zap.NewNop()

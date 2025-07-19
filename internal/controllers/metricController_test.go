@@ -5,13 +5,14 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"github.com/go-resty/resty/v2"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/go-resty/resty/v2"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

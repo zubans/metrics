@@ -1,23 +1,29 @@
 package models
 
+// MetricType определяет тип метрики: gauge или counter.
 type MetricType string
 
 const (
-	Gauge   MetricType = "gauge"
+	// Gauge — метрика типа gauge.
+	Gauge MetricType = "gauge"
+	// Counter — метрика типа counter.
 	Counter MetricType = "counter"
 )
 
+// Metric описывает одну метрику.
 type Metric struct {
 	Type  MetricType
 	Name  string
 	Value int
 }
 
+// Metrics содержит список метрик и счётчик PollCount.
 type Metrics struct {
 	MetricList []Metric
 	PollCount  int
 }
 
+// MetricsDTO — структура для передачи метрик в формате JSON.
 type MetricsDTO struct {
 	ID    string   `json:"id"`
 	MType string   `json:"type"`
@@ -25,6 +31,7 @@ type MetricsDTO struct {
 	Value *float64 `json:"value,omitempty"`
 }
 
+// ConvertToDTO преобразует Metric в MetricsDTO.
 func ConvertToDTO(m Metric) MetricsDTO {
 	dto := MetricsDTO{
 		ID:    m.Name,
@@ -43,6 +50,7 @@ func ConvertToDTO(m Metric) MetricsDTO {
 	return dto
 }
 
+// ConvertMetricsListToDTO преобразует список Metric в список MetricsDTO.
 func ConvertMetricsListToDTO(metrics []Metric) []MetricsDTO {
 	result := make([]MetricsDTO, 0, len(metrics))
 	for _, m := range metrics {
