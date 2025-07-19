@@ -2,6 +2,10 @@ package main
 
 import (
 	"context"
+	"log"
+	"net/http"
+	"time"
+
 	"github.com/zubans/metrics/internal/config"
 	"github.com/zubans/metrics/internal/handler"
 	"github.com/zubans/metrics/internal/logger"
@@ -10,9 +14,6 @@ import (
 	"github.com/zubans/metrics/internal/services"
 	"github.com/zubans/metrics/internal/storage"
 	"go.uber.org/zap"
-	"log"
-	"net/http"
-	"time"
 )
 
 var cfg = config.NewServerConfig()

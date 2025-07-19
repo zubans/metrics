@@ -2,16 +2,19 @@ package storage
 
 import (
 	"context"
-	"github.com/zubans/metrics/internal/models"
 	"sync"
+
+	"github.com/zubans/metrics/internal/models"
 )
 
+// MemStorage реализует хранение метрик в памяти с потокобезопасностью.
 type MemStorage struct {
 	Gauges   map[string]float64
 	Counters map[string]int64
 	mutex    sync.Mutex
 }
 
+// NewMemStorage создаёт новое in-memory хранилище метрик.
 func NewMemStorage() *MemStorage {
 	return &MemStorage{
 		Gauges:   make(map[string]float64),
@@ -19,6 +22,7 @@ func NewMemStorage() *MemStorage {
 	}
 }
 
+// UpdateGauge обновляет gauge-метрику.
 func (m *MemStorage) UpdateGauge(ctx context.Context, name string, value float64) float64 {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -27,6 +31,7 @@ func (m *MemStorage) UpdateGauge(ctx context.Context, name string, value float64
 	return m.Gauges[name]
 }
 
+// UpdateCounter обновляет counter-метрику.
 func (m *MemStorage) UpdateCounter(ctx context.Context, name string, value int64) int64 {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -35,6 +40,7 @@ func (m *MemStorage) UpdateCounter(ctx context.Context, name string, value int64
 	return m.Counters[name]
 }
 
+// GetGauge возвращает значение gauge-метрики.
 func (m *MemStorage) GetGauge(ctx context.Context, name string) (float64, bool) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -42,6 +48,7 @@ func (m *MemStorage) GetGauge(ctx context.Context, name string) (float64, bool) 
 	return value, exists
 }
 
+// GetCounter возвращает значение counter-метрики.
 func (m *MemStorage) GetCounter(ctx context.Context, name string) (int64, bool) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -49,6 +56,7 @@ func (m *MemStorage) GetCounter(ctx context.Context, name string) (int64, bool) 
 	return value, exists
 }
 
+// GetGauges возвращает копию всех gauge-метрик.
 func (m *MemStorage) GetGauges(ctx context.Context) map[string]float64 {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -59,6 +67,7 @@ func (m *MemStorage) GetGauges(ctx context.Context) map[string]float64 {
 	return result
 }
 
+// GetCounters возвращает копию всех counter-метрик.
 func (m *MemStorage) GetCounters(ctx context.Context) map[string]int64 {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -69,6 +78,7 @@ func (m *MemStorage) GetCounters(ctx context.Context) map[string]int64 {
 	return result
 }
 
+// ShowMetrics возвращает все метрики.
 func (m *MemStorage) ShowMetrics(ctx context.Context) (map[string]float64, map[string]int64, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()

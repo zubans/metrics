@@ -3,9 +3,10 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"github.com/zubans/metrics/internal/models"
 	"log"
 	"time"
+
+	"github.com/zubans/metrics/internal/models"
 )
 
 type PostDB struct {

@@ -4,39 +4,51 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strconv"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/zubans/metrics/internal/errdefs"
 	"github.com/zubans/metrics/internal/models"
 	"github.com/zubans/metrics/internal/storage"
-	"sort"
-	"strconv"
 )
 
+// MetricStorage определяет интерфейс для хранения и управления метриками.
 type MetricStorage interface {
+	// UpdateGauge обновляет gauge-метрику.
 	UpdateGauge(ctx context.Context, name string, value float64) float64
+	// UpdateCounter обновляет counter-метрику.
 	UpdateCounter(ctx context.Context, name string, value int64) int64
+	// GetGauge возвращает значение gauge-метрики.
 	GetGauge(ctx context.Context, name string) (float64, bool)
+	// GetCounter возвращает значение counter-метрики.
 	GetCounter(ctx context.Context, name string) (int64, bool)
+	// ShowMetrics возвращает все метрики.
 	ShowMetrics(ctx context.Context) (map[string]float64, map[string]int64, error)
+	// UpdateMetrics обновляет несколько метрик.
 	UpdateMetrics(ctx context.Context, m []models.MetricsDTO) error
 }
 
+// Storage реализует MetricStorage поверх другого хранилища.
 type Storage struct {
 	storage MetricStorage
 }
 
+// NewMetricService создаёт сервис для работы с метриками.
 func NewMetricService(storage MetricStorage) *Storage {
 	return &Storage{storage: storage}
 }
 
 var validate = validator.New()
 
+// MetricData содержит данные о метрике для валидации и передачи.
 type MetricData struct {
 	Type  string `validate:"required,oneof=counter gauge"`
 	Name  string `validate:"required"`
 	Value *string
 }
 
+// NewMetricData создаёт и валидирует структуру MetricData.
 func NewMetricData(t, n string, v ...string) (*MetricData, error) {
 	m := &MetricData{
 		Type: t,
@@ -54,6 +66,7 @@ func NewMetricData(t, n string, v ...string) (*MetricData, error) {
 	return m, nil
 }
 
+// ParseMetricValue преобразует строковое значение метрики в float64.
 func ParseMetricValue(mData *MetricData) (float64, error) {
 	if mData.Value == nil {
 		return 0, fmt.Errorf("value is nil for metric %s", mData.Name)

@@ -5,13 +5,14 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"github.com/go-resty/resty/v2"
-	"github.com/zubans/metrics/internal/models"
-	"github.com/zubans/metrics/internal/services"
 	"io"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/go-resty/resty/v2"
+	"github.com/zubans/metrics/internal/models"
+	"github.com/zubans/metrics/internal/services"
 )
 
 var gzipNewWriter = func(w io.Writer) *gzip.Writer {

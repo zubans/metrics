@@ -3,8 +3,9 @@ package storage
 import (
 	"context"
 	"fmt"
-	"github.com/zubans/metrics/internal/models"
 	"log"
+
+	"github.com/zubans/metrics/internal/models"
 )
 
 type AutoStorage struct {

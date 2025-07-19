@@ -3,13 +3,14 @@ package handler
 import (
 	"bytes"
 	"context"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/zubans/metrics/internal/services"
 	"github.com/zubans/metrics/internal/storage"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 )
 
 func TestHandler_UpdateMetricJSON(t *testing.T) {

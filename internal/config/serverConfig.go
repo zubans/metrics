@@ -2,12 +2,13 @@ package config
 
 import (
 	"flag"
-	"github.com/caarlos0/env/v6"
-	"github.com/zubans/metrics/internal/logger"
-	"go.uber.org/zap"
 	"log"
 	"reflect"
 	"time"
+
+	"github.com/caarlos0/env/v6"
+	"github.com/zubans/metrics/internal/logger"
+	"go.uber.org/zap"
 )
 
 type Config struct {
