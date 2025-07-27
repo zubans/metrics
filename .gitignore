@@ -23,3 +23,6 @@ vendor/
 # IDEs directories
 .idea
 .vscode
+
+# Generated files
+internal/version/version_generated.go

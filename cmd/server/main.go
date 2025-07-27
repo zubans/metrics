@@ -9,15 +9,14 @@ import (
 	"github.com/zubans/metrics/internal/router"
 	"github.com/zubans/metrics/internal/services"
 	"github.com/zubans/metrics/internal/storage"
+	"github.com/zubans/metrics/internal/version"
 	"go.uber.org/zap"
 	"log"
 	"net/http"
 	"time"
 )
 
-var cfg = config.NewServerConfig()
-
-func run(h http.Handler) error {
+func run(h http.Handler, cfg *config.Config) error {
 
 	if err := logger.Initialize(cfg.FlagLogLevel); err != nil {
 		log.Printf("logger error: %v", err)
@@ -29,6 +28,10 @@ func run(h http.Handler) error {
 }
 
 func main() {
+	version.PrintBuildInfo()
+
+	var cfg = config.NewServerConfig()
+
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Log.Info("CRITICAL panic occurred", zap.Any("error", r))
@@ -79,7 +82,7 @@ func main() {
 	var memHandler = handler.NewHandler(serv)
 	r := router.GetRouter(memHandler)
 
-	if err := run(middlewares.RequestLogger(r)); err != nil {
+	if err := run(middlewares.RequestLogger(r), cfg); err != nil {
 		log.Printf("Server failed to start: %v", err)
 	}
 
