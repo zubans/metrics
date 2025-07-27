@@ -1,4 +1,7 @@
-### Send POST request for update counter
+###Ping
+GET localhost:8080/ping
+
+### Send POST error request for update counter
 POST http://localhost:8080/update/
 Content-Type: application/json
 
@@ -8,34 +11,88 @@ Content-Type: application/json
   "value": 1
 }
 
+### Send POST request for update counter
+POST http://localhost:8080/update/
+Content-Type: application/json
+
+{
+  "id": "PollCount",
+  "type": "counter",
+  "delta": 7
+}
+
 ### Send POST request for update gauge
 POST http://localhost:8080/update/
 Content-Type: application/json
 
 {
-  "id": "some_gouge",
+  "id": "Alloc",
   "type": "gauge",
-  "value": 15423.1988
+  "value": 15424.1987
 }
+
+### Send Conunter
+POST http://localhost:8080/update/
+Content-Type: application/json
+
+{
+  "id": "PollCount",
+  "type": "counter",
+  "delta": 10
+}
+
+### GET ALL
+GET http://localhost:8080
+Content-Type: text/html
+Accept-Encoding: gzip
+
+### Send POST request for batch metrics
+POST http://localhost:8080/updates/
+Content-Type: application/json
+
+[
+  {"id":"CounterBatchZip225","type":"counter","delta":614323683},
+  {"id":"GaugeBatchZip173","type":"gauge","value":94541.18976358262},
+  {"id":"CounterBatchZip225","type":"counter","delta":1245788997},
+  {"id":"GaugeBatchZip173","type":"gauge","value":561652.1556043632}
+]
 
 ### Send POST request for get gauge
 POST http://localhost:8080/value/
 Content-Type: application/json
 
-{"id":"some_gouge","type":"gauge"}
+{
+  "id": "CounterBatchZip34",
+  "type": "counter"
+}
+
+### Get gauges
+POST http://localhost:8080/value/
+Content-Type: application/json
+
+{
+"id": "GaugeBatchZip173",
+"type": "gauge"
+}
 
 
 ### Send POST request for get metric
 POST http://localhost:8080/value/
 Content-Type: application/json
 
-{"id":"PollCount","type":"counter"}
+{
+  "id": "Counter",
+  "type": "counter"
+}
 
 ### Send POST request for get metric
 POST http://localhost:8083/value/
 Content-Type: application/json
 
-{"id":"GetSet23","type":"counter"}
+{
+  "id": "GetSet23",
+  "type": "counter"
+}
 
 <> 2025-04-16T120540.200.txt
 
@@ -44,6 +101,9 @@ POST http://localhost:8080/update/gauge/Alloc/667168
 
 ### GET VALUE ITER2
 GET http://localhost:8080/value/gauge/Alloc
+
+### POST VALUE ITER1
+POST http://localhost:8080/update/counter/testCounter/100
 
 
 

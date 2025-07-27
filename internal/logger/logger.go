@@ -1,61 +1,54 @@
 package logger
 
 import (
-	"bytes"
+	"github.com/stretchr/testify/assert/yaml"
 	"go.uber.org/zap"
-	"io"
-	"net/http"
-	"time"
+	"go.uber.org/zap/zapcore"
+	"os"
 )
 
 var Log = zap.NewNop()
 
-type (
-	responseData struct {
-		status int
-		size   int
-	}
-
-	loggingResponseWriter struct {
-		http.ResponseWriter
-		responseData *responseData
-	}
-)
-
-type RequestInfo struct {
-	Method string `json:"method"`
-	URL    string `json:"url"`
-	BODY   string
-	Time   string `json:"time"`
+type Config struct {
+	Level            string   `yaml:"level"`
+	Encoding         string   `yaml:"encoding"`
+	OutputPaths      []string `yaml:"outputPaths"`
+	ErrorOutputPaths []string `yaml:"errorOutputPaths"`
+	EncoderConfig    struct {
+		MessageKey string `yaml:"messageKey"`
+		LevelKey   string `yaml:"levelKey"`
+		LevelEnc   string `yaml:"levelEncoder"`
+		TimeKey    string `yaml:"timeKey"`
+		TimeEnc    string `yaml:"encodeTime"`
+	} `yaml:"encoderConfig"`
 }
 
-type ResponseInfo struct {
-	Status int `json:"status"`
-	Size   int `json:"size"`
-}
-
-func (r *loggingResponseWriter) Write(data []byte) (int, error) {
-	if r.responseData.status == 0 {
-		r.responseData.status = http.StatusOK
-	}
-
-	size, err := r.ResponseWriter.Write(data)
-	r.responseData.size += size
-	return size, err
-}
-
-func (r *loggingResponseWriter) WriteHeader(status int) {
-	r.ResponseWriter.WriteHeader(status)
-	r.responseData.status = status
+type AppConfig struct {
+	Logger Config `yaml:"logger"`
 }
 
 func Initialize(level string) error {
+	var appCfg AppConfig
+
 	lvl, err := zap.ParseAtomicLevel(level)
 	if err != nil {
 		return err
 	}
 
-	cfg := zap.NewDevelopmentConfig()
+	var cfg zap.Config
+
+	configFile, err := os.ReadFile("config.yaml")
+
+	if err != nil {
+		cfg = zap.NewDevelopmentConfig()
+	} else {
+		err := yaml.Unmarshal(configFile, &appCfg)
+		if err != nil {
+			return err
+		}
+
+		cfg = ConvertToZapConfig(appCfg.Logger)
+	}
 	cfg.Level = lvl
 
 	zapLogger, err := cfg.Build()
@@ -66,44 +59,51 @@ func Initialize(level string) error {
 	return nil
 }
 
-func RequestLogger(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
+func ConvertToZapConfig(c Config) zap.Config {
+	zc := zap.Config{
+		Level:            zap.NewAtomicLevelAt(parseLevel(c.Level)),
+		Development:      false,
+		Encoding:         c.Encoding,
+		OutputPaths:      c.OutputPaths,
+		ErrorOutputPaths: c.ErrorOutputPaths,
+		EncoderConfig: zapcore.EncoderConfig{
+			MessageKey:  c.EncoderConfig.MessageKey,
+			LevelKey:    c.EncoderConfig.LevelKey,
+			EncodeLevel: parseLevelEncoder(c.EncoderConfig.LevelEnc),
+			TimeKey:     c.EncoderConfig.TimeKey,
+			EncodeTime:  parseTimeEncoder(c.EncoderConfig.TimeEnc),
+		},
+	}
+	return zc
+}
 
-		var bodyString string
-		if r.Method == http.MethodPost || r.Method == http.MethodPut {
-			bodyBytes, err := io.ReadAll(r.Body)
-			if err != nil {
-				Log.Info("failed to read request body", zap.Error(err))
-			} else {
-				bodyString = string(bodyBytes)
-				r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-			}
-		}
+func parseLevel(level string) zapcore.Level {
+	l := new(zapcore.Level)
+	err := l.UnmarshalText([]byte(level))
+	if err != nil {
+		return zapcore.InfoLevel // дефолт
+	}
+	return *l
+}
 
-		responseData := &responseData{
-			status: 0,
-			size:   0,
-		}
+func parseLevelEncoder(enc string) zapcore.LevelEncoder {
+	switch enc {
+	case "capital":
+		return zapcore.CapitalLevelEncoder
+	case "color":
+		return zapcore.CapitalColorLevelEncoder
+	default:
+		return zapcore.LowercaseLevelEncoder
+	}
+}
 
-		lw := &loggingResponseWriter{
-			ResponseWriter: w,
-			responseData:   responseData,
-		}
-		h.ServeHTTP(lw, r)
-
-		duration := time.Since(start)
-		Log.Info("got incoming HTTP request",
-			zap.Any("request", RequestInfo{
-				Method: r.Method,
-				URL:    r.URL.String(),
-				BODY:   bodyString,
-				Time:   duration.String(),
-			}),
-			zap.Any("response", ResponseInfo{
-				Status: responseData.status,
-				Size:   responseData.size,
-			}),
-		)
-	})
+func parseTimeEncoder(enc string) zapcore.TimeEncoder {
+	switch enc {
+	case "iso8601":
+		return zapcore.ISO8601TimeEncoder
+	case "epoch":
+		return zapcore.EpochTimeEncoder
+	default:
+		return zapcore.RFC3339TimeEncoder
+	}
 }

@@ -2,14 +2,21 @@ package controllers
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"github.com/go-resty/resty/v2"
 	"github.com/zubans/metrics/internal/models"
 	"github.com/zubans/metrics/internal/services"
+	"io"
 	"log"
 	"net/http"
 	"time"
 )
+
+var gzipNewWriter = func(w io.Writer) *gzip.Writer {
+	return gzip.NewWriter(w)
+}
 
 type MetricControllerer interface {
 	UpdateMetrics()
@@ -18,11 +25,14 @@ type MetricControllerer interface {
 
 type MetricsController struct {
 	metricsService *services.MetricsService
+	httpClient     *resty.Client
 }
 
 func NewMetricsController(metricsService *services.MetricsService) *MetricsController {
 	return &MetricsController{
 		metricsService: metricsService,
+		httpClient: resty.New().
+			SetTimeout(3 * time.Second),
 	}
 }
 
@@ -30,54 +40,117 @@ func (mc *MetricsController) UpdateMetrics() {
 	mc.metricsService.CollectMetrics()
 }
 
-func (mc *MetricsController) SendMetrics() {
+func (mc *MetricsController) JSONSendMetrics() {
+	retryDelays := []time.Duration{
+		1 * time.Second,
+		3 * time.Second,
+		5 * time.Second,
+	}
+
 	metrics := mc.metricsService.GetMetrics()
+	dtoMetrics := models.ConvertMetricsListToDTO(metrics.MetricList)
 
-	for _, metric := range metrics.MetricList {
-		url := fmt.Sprintf("http://%s/update/%s/%s/%d", mc.metricsService.Cfg.AddressServer, metric.Type, metric.Name, metric.Value)
+	url := fmt.Sprintf("http://%s/updates/", mc.metricsService.Cfg.AddressServer)
 
-		resp, err := http.Post(url, "text/plain", nil)
-		if err != nil {
-			fmt.Printf("Error sending metric %s: %v\n", metric.Name, err)
-			continue
-		}
-		defer resp.Body.Close()
+	body, err := json.Marshal(dtoMetrics)
+	if err != nil {
+		log.Println("Error json Encode metric data")
+		return
+	}
 
-		if resp.StatusCode == http.StatusOK {
-			fmt.Printf("Successfully sent metric: %s\n", metric.Name)
-		} else {
-			fmt.Printf("Failed to send metric: %s, status code: %d\n", metric.Name, resp.StatusCode)
-		}
+	var buf bytes.Buffer
+
+	gz := gzipNewWriter(&buf)
+
+	_, err = gz.Write(body)
+	if err != nil {
+		log.Println("Error compressing metric data")
+		return
+	}
+
+	err = gz.Close()
+	if err != nil {
+		log.Println("Error close gzip compressor")
+		return
+	}
+
+	response, err := mc.httpClient.
+		SetRetryCount(3).
+		SetRetryWaitTime(1*time.Second).
+		SetRetryMaxWaitTime(5*time.Second).
+		SetRetryAfter(func(c *resty.Client, r *resty.Response) (time.Duration, error) {
+			attempt := r.Request.Attempt - 1
+			if attempt >= len(retryDelays) {
+				attempt = len(retryDelays) - 1
+			}
+
+			return retryDelays[attempt], nil
+		}).
+		R().
+		SetHeader("Content-Type", "application/json").
+		SetHeader("Content-Encoding", "gzip").
+		SetBody(buf.Bytes()).
+		Post(url)
+
+	if err != nil {
+		log.Printf("Error sending metric: %v. BODY: %v\n", err, metrics)
+		return
+	}
+
+	if response.IsSuccess() {
+		log.Printf("Successfully sent metric: %v\n", metrics)
+	} else {
+		log.Printf("Failed to send metric: %v, status code: %d\n", metrics, response.StatusCode())
 	}
 }
 
-func (mc *MetricsController) JSONSendMetrics() {
+func (mc *MetricsController) OldJSONSendMetrics() {
 	metrics := mc.metricsService.GetMetrics()
 	dtoMetrics := models.ConvertMetricsListToDTO(metrics.MetricList)
 
 	url := fmt.Sprintf("http://%s/update/", mc.metricsService.Cfg.AddressServer)
 
-	client := http.Client{
-		Timeout: 3 * time.Second,
-	}
 	for _, metric := range dtoMetrics {
-		b, _ := json.Marshal(metric)
+		b, err := json.Marshal(metric)
+		if err != nil {
+			log.Printf("Error json encode metric data")
+		}
 
-		resp, err := client.Post(url, "application/json", bytes.NewBuffer(b))
+		var buf bytes.Buffer
+
+		gz := gzipNewWriter(&buf)
+
+		_, err = gz.Write(b)
+		if err != nil {
+			log.Println("Error compressing metric data")
+			return
+		}
+
+		err = gz.Close()
+		if err != nil {
+			log.Println("Error close gzip compressor")
+			return
+		}
+
+		req, _ := http.NewRequest("POST", url, &buf)
+
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Encoding", "gzip")
+
+		response, err := mc.httpClient.R().
+			SetHeader("Content-Type", "application/json").
+			SetHeader("Content-Encoding", "gzip").
+			SetBody(dtoMetrics).
+			Post(url)
 		if err != nil {
 			log.Printf("Error sending metric %s: %v. BODY: %v\n", metric.ID, err, metric)
 			continue
 		}
 
-		err = resp.Body.Close()
-		if err != nil {
-			fmt.Printf("Failed to close Body: %s\n", err)
-			return
-		}
-		if resp.StatusCode == http.StatusOK {
-			fmt.Printf("Successfully sent metric: %s\n", metric.ID)
+		if response.IsSuccess() {
+			log.Printf("Successfully sent metric: %s\n", metric.ID)
 		} else {
-			fmt.Printf("Failed to send metric: %s, status code: %d\n", metric.ID, resp.StatusCode)
+			log.Printf("Failed to send metric: %s, status code: %d\n", metric.ID, response.StatusCode())
 		}
 	}
 }

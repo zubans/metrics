@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/zubans/metrics/internal/services"
@@ -16,29 +17,34 @@ func TestHandler_UpdateMetricJSON(t *testing.T) {
 	newService := services.NewMetricService(newMemStorage)
 	handler := NewHandler(newService)
 	tests := []struct {
-		name               string
-		requestData        string
-		expectedStatusCode int
+		name                string
+		requestData         string
+		expectedStatusCode  int
+		expectedContentType string
 	}{
 		{
-			name:               "Valid Counter Metric",
-			requestData:        `{  "id": "PollCount",  "type": "counter",  "delta": 1}`,
-			expectedStatusCode: http.StatusOK,
+			name:                "Valid Counter Metric",
+			requestData:         `{  "id": "PollCount",  "type": "counter",  "delta": 1}`,
+			expectedStatusCode:  http.StatusOK,
+			expectedContentType: "application/json",
 		},
 		{
-			name:               "Valid Gauge Metric",
-			requestData:        `{  "id": "Alloc",  "type": "gauge",  "value": 1}`,
-			expectedStatusCode: http.StatusOK,
+			name:                "Valid Gauge Metric",
+			requestData:         `{  "id": "Alloc",  "type": "gauge",  "value": 1}`,
+			expectedStatusCode:  http.StatusOK,
+			expectedContentType: "application/json",
 		},
 		{
-			name:               "Invalid Gauge Metric - bad value type",
-			requestData:        `{  "id": "Alloc",  "type": "gauge",  "value": "1""}`,
-			expectedStatusCode: http.StatusBadRequest,
+			name:                "Invalid Gauge Metric - bad value type",
+			requestData:         `{  "id": "Alloc",  "type": "gauge",  "value": "1""}`,
+			expectedStatusCode:  http.StatusBadRequest,
+			expectedContentType: "application/json",
 		},
 		{
-			name:               "Invalid Gauge Metric - unsupported type",
-			requestData:        `{  "id": "Alloc",  "type": "unsupported",  "value": 1"}`,
-			expectedStatusCode: http.StatusBadRequest,
+			name:                "Invalid Gauge Metric - unsupported type",
+			requestData:         `{  "id": "Alloc",  "type": "unsupported",  "value": 1"}`,
+			expectedStatusCode:  http.StatusBadRequest,
+			expectedContentType: "application/json",
 		},
 	}
 
@@ -55,6 +61,7 @@ func TestHandler_UpdateMetricJSON(t *testing.T) {
 			h.ServeHTTP(rr, req)
 
 			assert.Equal(t, tt.expectedStatusCode, rr.Code)
+			assert.Equal(t, tt.expectedContentType, rr.Header().Get("Content-Type"))
 		})
 	}
 }
@@ -138,12 +145,12 @@ func TestHandler_UpdateMetric(t *testing.T) {
 
 			if test.expectedStatusCode == http.StatusOK {
 				if test.metricType == "gauge" {
-					gaugeValue, exists := newMemStorage.GetGauge(test.metricName)
+					gaugeValue, exists := newMemStorage.GetGauge(context.Background(), test.metricName)
 					if assert.True(t, exists, "Expected  gauge value is exist") {
 						assert.Equal(t, test.expectedGauge, gaugeValue, "Gauge value mismatch")
 					}
 				} else if test.metricType == "counter" {
-					counterValue, exists := newMemStorage.GetCounter(test.metricName)
+					counterValue, exists := newMemStorage.GetCounter(context.Background(), test.metricName)
 					if assert.True(t, exists, "Expected counter value is exist") {
 						assert.Equal(t, test.expectedCounter, counterValue, "Counter value mismatch")
 					}

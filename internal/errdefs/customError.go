@@ -1,6 +1,11 @@
 package errdefs
 
-import "net/http"
+import (
+	"errors"
+	"net"
+	"net/http"
+	"syscall"
+)
 
 type CustomError struct {
 	Message string
@@ -23,4 +28,12 @@ func NewBadRequestError(message string) *CustomError {
 		Message: message,
 		Code:    http.StatusBadRequest,
 	}
+}
+
+func IsConnectionRefused(err error) bool {
+	var opErr *net.OpError
+	if errors.As(err, &opErr) {
+		return errors.Is(opErr.Err, syscall.ECONNREFUSED)
+	}
+	return false
 }

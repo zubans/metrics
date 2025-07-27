@@ -1,9 +1,9 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/zubans/metrics/internal/errdefs"
 	"github.com/zubans/metrics/internal/logger"
@@ -16,10 +16,12 @@ import (
 )
 
 type ServerMetricService interface {
-	UpdateMetric(mData *services.MetricData) (*models.MetricsDTO, *errdefs.CustomError, error)
-	GetMetric(mData *services.MetricData) (string, *errdefs.CustomError)
-	GetJSONMetric(jsonData *models.MetricsDTO) ([]byte, *errdefs.CustomError)
-	ShowMetrics() string
+	UpdateMetric(ctx context.Context, mData *services.MetricData) (*models.MetricsDTO, *errdefs.CustomError, error)
+	UpdateMetrics(ctx context.Context, m []models.MetricsDTO) (bool, *errdefs.CustomError, error)
+	GetMetric(ctx context.Context, mData *services.MetricData) (string, *errdefs.CustomError)
+	GetJSONMetric(ctx context.Context, jsonData *models.MetricsDTO) ([]byte, *errdefs.CustomError)
+	ShowMetrics(ctx context.Context) (string, error)
+	Ping(ctx context.Context) error
 }
 
 type Handler struct {
@@ -31,6 +33,7 @@ func NewHandler(service ServerMetricService) *Handler {
 }
 
 func (h *Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	v := chi.URLParam(r, "value")
 	mData, err := services.NewMetricData(
 		chi.URLParam(r, "type"),
@@ -43,7 +46,7 @@ func (h *Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, details, err := h.service.UpdateMetric(mData)
+	_, details, err := h.service.UpdateMetric(ctx, mData)
 
 	if err != nil {
 		var CustomErr *errdefs.CustomError
@@ -60,11 +63,38 @@ func (h *Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *Handler) UpdateMetricJSON(w http.ResponseWriter, r *http.Request) {
-	var m models.MetricsDTO
+func (h *Handler) UpdateMetrics(w http.ResponseWriter, r *http.Request) {
+	var m []models.MetricsDTO
+	ctx := r.Context()
 
 	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
-		http.Error(w, "invalid input: "+err.Error(), http.StatusBadRequest)
+		writeJSONError(w, "invalid input: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	_, details, err := h.service.UpdateMetrics(ctx, m)
+
+	if err != nil {
+		var CustomErr *errdefs.CustomError
+		if errors.As(details, &CustomErr) {
+			logger.Log.Info("custom error",
+				zap.String("message", CustomErr.Message),
+				zap.Int("status_code", CustomErr.Code),
+			)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) UpdateMetricJSON(w http.ResponseWriter, r *http.Request) {
+	var m models.MetricsDTO
+	ctx := r.Context()
+
+	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
+		writeJSONError(w, "invalid input: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -99,11 +129,11 @@ func (h *Handler) UpdateMetricJSON(w http.ResponseWriter, r *http.Request) {
 		val := strconv.FormatInt(int64(*m.Delta), 10)
 		mData.Value = &val
 	default:
-		http.Error(w, "invalid input", http.StatusBadRequest)
+		writeJSONError(w, "invalid input", http.StatusBadRequest)
 		return
 	}
 
-	res, details, err := h.service.UpdateMetric(mData)
+	res, details, err := h.service.UpdateMetric(ctx, mData)
 
 	if err != nil {
 		var CustomErr *errdefs.CustomError
@@ -125,6 +155,8 @@ func (h *Handler) UpdateMetricJSON(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	mData, err := services.NewMetricData(
 		chi.URLParam(r, "type"),
 		chi.URLParam(r, "name"),
@@ -136,14 +168,14 @@ func (h *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var res string
-	res, err = h.service.GetMetric(mData)
+	res, err = h.service.GetMetric(ctx, mData)
 
 	var CustomErr *errdefs.CustomError
 
 	if err.(*errdefs.CustomError) != nil {
 		if errors.As(err, &CustomErr) {
 			http.Error(w, CustomErr.Message, CustomErr.Code)
-			fmt.Printf("custom error: %s\n", CustomErr.Error())
+			logger.Log.Info("custom error", zap.String("message", CustomErr.Error()))
 			return
 		}
 	}
@@ -159,6 +191,7 @@ func (h *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 	var m *models.MetricsDTO
+	ctx := r.Context()
 
 	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
 		http.Error(w, "invalid input: "+err.Error(), http.StatusBadRequest)
@@ -168,7 +201,7 @@ func (h *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 	var res []byte
 	var err error
 
-	res, err = h.service.GetJSONMetric(m)
+	res, err = h.service.GetJSONMetric(ctx, m)
 
 	var CustomErr *errdefs.CustomError
 
@@ -206,9 +239,13 @@ func (h *Handler) GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ShowMetrics(w http.ResponseWriter, r *http.Request) {
-	value := h.service.ShowMetrics()
+	ctx := r.Context()
+	value, err := h.service.ShowMetrics(ctx)
+	if err != nil {
+		logger.Log.Info("failed to get metrics", zap.Error(err))
+	}
 
-	_, err := io.WriteString(w, value)
+	_, err = io.WriteString(w, value)
 	if err != nil {
 		return
 	}
@@ -223,4 +260,20 @@ func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
 	}
 
 	_ = json.NewEncoder(w).Encode(resp)
+}
+
+func (h *Handler) PingServer(w http.ResponseWriter, r *http.Request) {
+	err := h.service.Ping(r.Context())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	_, err = io.WriteString(w, "")
+	if err != nil {
+		return
+	}
 }

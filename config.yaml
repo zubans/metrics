@@ -1,0 +1,16 @@
+logger:
+  level: debug
+  encoding: console
+  outputPaths: [ stdout, logs/app.log ]
+  errorOutputPaths: [ "stderr" ]
+  encoderConfig:
+    messageKey: msg
+    levelKey: level
+    levelEncoder: lowercase
+    timeKey: ts
+    encodeTime: iso8601
+
+db:
+  user: db_user
+  password: db_pass
+  dbname: db_name
