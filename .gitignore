@@ -25,4 +25,4 @@ vendor/
 .vscode
 
 # Generated files
-internal/version/version_generated.go
+internal/version/version.go
