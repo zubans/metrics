@@ -33,16 +33,14 @@ const (
 		panic(err)
 	}
 
-	currentDir, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
+	// Находим корень проекта (где находится go.mod)
+	projectRoot := findProjectRoot()
+	outputPath := filepath.Join(projectRoot, "internal", "version", "version_generated.go")
 
-	var outputPath string
-	if strings.HasSuffix(currentDir, "internal/version") {
-		outputPath = filepath.Join(currentDir, "version_generated.go")
-	} else {
-		outputPath = "internal/version/version_generated.go"
+	// Создаем директорию, если она не существует
+	dir := filepath.Dir(outputPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		panic(err)
 	}
 
 	err = os.WriteFile(outputPath, formatted, 0644)
@@ -54,6 +52,27 @@ const (
 	fmt.Printf("  Version: %s\n", buildVersion)
 	fmt.Printf("  Date: %s\n", buildDate)
 	fmt.Printf("  Commit: %s\n", buildCommit)
+}
+
+// findProjectRoot находит корень проекта (директорию с go.mod)
+func findProjectRoot() string {
+	currentDir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	// Идем вверх по дереву директорий, пока не найдем go.mod
+	for {
+		if _, err := os.Stat(filepath.Join(currentDir, "go.mod")); err == nil {
+			return currentDir
+		}
+
+		parent := filepath.Dir(currentDir)
+		if parent == currentDir {
+			panic("go.mod not found in any parent directory")
+		}
+		currentDir = parent
+	}
 }
 
 func getGitTag() string {
