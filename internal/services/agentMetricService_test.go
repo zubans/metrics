@@ -208,10 +208,6 @@ func TestMetricsService_InterfaceCompliance(t *testing.T) {
 
 	var collector MetricsCollector = NewMetricsService(cfg)
 
-	if collector == nil {
-		t.Fatal("MetricsService should implement MetricsCollector interface")
-	}
-
 	collector.CollectMetrics()
 	metrics := collector.GetMetrics()
 
