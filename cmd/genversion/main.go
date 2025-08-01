@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	buildVersion := getGitTag()
+	buildVersion := getGitTag("N/A")
 	buildDate := getBuildDate()
 	buildCommit := getGitCommit()
 
@@ -47,7 +47,8 @@ func PrintBuildInfo() {
 	generated := []byte(sb.String())
 	formatted, err := format.Source(generated)
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "failed to format source: %v\n", err)
+		os.Exit(1)
 	}
 
 	projectRoot := findProjectRoot()
@@ -57,22 +58,26 @@ func PrintBuildInfo() {
 	if _, err := os.Stat(outputPath); os.IsNotExist(err) {
 		fallbackContent, err := os.ReadFile(fallbackPath)
 		if err != nil {
-			panic(err)
+			fmt.Fprintf(os.Stderr, "failed to format source: %v\n", err)
+			os.Exit(1)
 		}
 		err = os.WriteFile(outputPath, fallbackContent, 0644)
 		if err != nil {
-			panic(err)
+			fmt.Fprintf(os.Stderr, "failed to format source: %v\n", err)
+			os.Exit(1)
 		}
 	}
 
 	dir := filepath.Dir(outputPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "failed to format source: %v\n", err)
+		os.Exit(1)
 	}
 
 	err = os.WriteFile(outputPath, formatted, 0644)
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "failed to format source: %v\n", err)
+		os.Exit(1)
 	}
 
 	fmt.Printf("Build info generated:\n")
@@ -84,7 +89,8 @@ func PrintBuildInfo() {
 func findProjectRoot() string {
 	currentDir, err := os.Getwd()
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "failed to format source: %v\n", err)
+		os.Exit(1)
 	}
 
 	for {
@@ -94,17 +100,18 @@ func findProjectRoot() string {
 
 		parent := filepath.Dir(currentDir)
 		if parent == currentDir {
-			panic("go.mod not found in any parent directory")
+			fmt.Fprintf(os.Stderr, "%s: %v\n", errGoModNotFound, err)
+			os.Exit(1)
 		}
 		currentDir = parent
 	}
 }
 
-func getGitTag() string {
+func getGitTag(fallback string) string {
 	cmd := exec.Command("git", "describe", "--tags", "--abbrev=0")
 	output, err := cmd.Output()
 	if err != nil {
-		return "N/A"
+		return fallback
 	}
 	return strings.TrimSpace(string(output))
 }
@@ -126,3 +133,5 @@ func getGitCommit() string {
 	}
 	return strings.TrimSpace(string(output))
 }
+
+const errGoModNotFound = "go.mod not found in any parent directory"

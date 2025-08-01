@@ -16,21 +16,19 @@ import (
 	"time"
 )
 
-func run(h http.Handler, cfg *config.Config) error {
-
-	if err := logger.Initialize(cfg.FlagLogLevel); err != nil {
-		log.Printf("logger error: %v", err)
-	}
-
-	logger.Log.Info("Starting server on ", zap.String("address", cfg.RunAddr))
-
-	return http.ListenAndServe(cfg.RunAddr, h)
+func run(h http.Handler, addr string) error {
+	logger.Log.Info("Starting server on ", zap.String("address", addr))
+	return http.ListenAndServe(addr, h)
 }
 
 func main() {
 	version.PrintBuildInfo()
 
 	var cfg = config.NewServerConfig()
+
+	if err := logger.Initialize(cfg.FlagLogLevel); err != nil {
+		log.Printf("logger error: %v", err)
+	}
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -82,7 +80,7 @@ func main() {
 	var memHandler = handler.NewHandler(serv)
 	r := router.GetRouter(memHandler)
 
-	if err := run(middlewares.RequestLogger(r), cfg); err != nil {
+	if err := run(middlewares.RequestLogger(r), cfg.RunAddr); err != nil {
 		log.Printf("Server failed to start: %v", err)
 	}
 
