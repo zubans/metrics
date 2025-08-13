@@ -17,6 +17,7 @@ type Config struct {
 	FileStoragePath string        `env:"FILE_STORAGE_PATH"`
 	Restore         bool          `env:"RESTORE"`
 	DBCfg           string        `env:"DATABASE_DSN"`
+	CryptoKey       string        `env:"CRYPTO_KEY"`
 }
 
 func NewServerConfig() *Config {
@@ -27,6 +28,7 @@ func NewServerConfig() *Config {
 	var storeInterval int
 	var storagePath string
 	var isRestore bool
+	var cryptoKey string
 
 	flag.StringVar(&addr, "a", "localhost:8080", "address and port to run server")
 	flag.StringVar(&flagLogLevel, "l", "info", "log level")
@@ -34,6 +36,7 @@ func NewServerConfig() *Config {
 	flag.StringVar(&storagePath, "f", "metric_storage.json", "file storage path")
 	flag.StringVar(&db, "d", "", "db credential")
 	flag.BoolVar(&isRestore, "r", true, "bool value. Ability to restore metrics from file")
+	flag.StringVar(&cryptoKey, "crypto-key", "", "path to RSA private key (PEM)")
 
 	flag.Parse()
 
@@ -43,6 +46,7 @@ func NewServerConfig() *Config {
 	cfg.FileStoragePath = storagePath
 	cfg.Restore = isRestore
 	cfg.DBCfg = db
+	cfg.CryptoKey = cryptoKey
 
 	err := env.ParseWithFuncs(&cfg, map[reflect.Type]env.ParserFunc{
 		reflect.TypeOf(time.Duration(0)): func(value string) (interface{}, error) {

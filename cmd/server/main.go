@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/zubans/metrics/internal/config"
+	"github.com/zubans/metrics/internal/cryptoutil"
 	"github.com/zubans/metrics/internal/handler"
 	"github.com/zubans/metrics/internal/logger"
 	"github.com/zubans/metrics/internal/middlewares"
@@ -77,7 +78,20 @@ func main() {
 
 	var serv = services.NewMetricService(actualStorage)
 	var memHandler = handler.NewHandler(serv)
-	r := router.GetRouter(memHandler)
+
+	var baseRouter = router.GetRouter(memHandler)
+	var r = baseRouter
+	if cfg.CryptoKey != "" {
+		priv, err := cryptoutil.LoadPrivateKey(cfg.CryptoKey)
+		if err != nil {
+			logger.Log.Info("failed to load private key", zap.Any("error", err))
+		} else {
+			decrypt := func(env *cryptoutil.Envelope) ([]byte, error) {
+				return cryptoutil.DecryptHybrid(priv, env)
+			}
+			r = middlewares.DecryptRequestMiddleware(decrypt)(baseRouter)
+		}
+	}
 
 	if err := run(middlewares.RequestLogger(r)); err != nil {
 		log.Printf("Server failed to start: %v", err)

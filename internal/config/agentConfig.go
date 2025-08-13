@@ -11,6 +11,7 @@ type AgentConfig struct {
 	AddressServer string        `env:"ADDRESS"`
 	SendInterval  time.Duration `env:"REPORT_INTERVAL"`
 	PollInterval  time.Duration `env:"POLL_INTERVAL"`
+	CryptoKey     string        `env:"CRYPTO_KEY"`
 }
 
 func NewAgentConfig() *AgentConfig {
@@ -18,15 +19,18 @@ func NewAgentConfig() *AgentConfig {
 	var repInt int
 	var pollInt int
 	var addr string
+	var cryptoKey string
 
 	flag.StringVar(&addr, "a", "localhost:8080", "address and port to run server")
 	flag.IntVar(&repInt, "r", 10, "report send interval")
 	flag.IntVar(&pollInt, "p", 2, "poll interval")
+	flag.StringVar(&cryptoKey, "crypto-key", "", "path to RSA public key (PEM)")
 	flag.Parse()
 
 	cfg.AddressServer = addr
 	cfg.SendInterval = time.Duration(repInt) * time.Second
 	cfg.PollInterval = time.Duration(pollInt) * time.Second
+	cfg.CryptoKey = cryptoKey
 
 	err := env.ParseWithFuncs(&cfg, map[reflect.Type]env.ParserFunc{
 		reflect.TypeOf(time.Duration(0)): func(value string) (interface{}, error) {
