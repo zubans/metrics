@@ -45,9 +45,10 @@ func TestGracefulShutdown(t *testing.T) {
 func TestSignalHandling(t *testing.T) {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-
-	if stop == nil {
-		t.Error("Signal channel should not be nil")
+	select {
+	case <-stop:
+		t.Error("Unexpected signal received")
+	default:
 	}
 
 	signal.Stop(stop)
