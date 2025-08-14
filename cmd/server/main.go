@@ -2,6 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	"github.com/zubans/metrics/internal/config"
 	"github.com/zubans/metrics/internal/cryptoutil"
 	"github.com/zubans/metrics/internal/handler"
@@ -11,23 +19,9 @@ import (
 	"github.com/zubans/metrics/internal/services"
 	"github.com/zubans/metrics/internal/storage"
 	"go.uber.org/zap"
-	"log"
-	"net/http"
-	"time"
 )
 
 var cfg = config.NewServerConfig()
-
-func run(h http.Handler) error {
-
-	if err := logger.Initialize(cfg.FlagLogLevel); err != nil {
-		log.Printf("logger error: %v", err)
-	}
-
-	logger.Log.Info("Starting server on ", zap.String("address", cfg.RunAddr))
-
-	return http.ListenAndServe(cfg.RunAddr, h)
-}
 
 func main() {
 	defer func() {
@@ -93,16 +87,32 @@ func main() {
 		}
 	}
 
-	if err := run(middlewares.RequestLogger(r)); err != nil {
-		log.Printf("Server failed to start: %v", err)
+	if err := logger.Initialize(cfg.FlagLogLevel); err != nil {
+		log.Printf("logger error: %v", err)
 	}
+	srv := &http.Server{Addr: cfg.RunAddr, Handler: middlewares.RequestLogger(r)}
 
-	defer func() {
-		logger.Log.Info("Saving metrics before shutdown...")
-		if err := dump.SaveMetricToFile(context.Background()); err != nil {
-			logger.Log.Info("failed to save metrics: ", zap.Any("error", err))
-		} else {
-			logger.Log.Info("Metrics saved.")
+	go func() {
+		logger.Log.Info("Starting server on ", zap.String("address", cfg.RunAddr))
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("Server failed to start: %v", err)
 		}
 	}()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	<-stop
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Server shutdown error: %v", err)
+	}
+
+	logger.Log.Info("Saving metrics before shutdown...")
+	if err := dump.SaveMetricToFile(context.Background()); err != nil {
+		logger.Log.Info("failed to save metrics: ", zap.Any("error", err))
+	} else {
+		logger.Log.Info("Metrics saved.")
+	}
 }
