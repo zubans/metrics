@@ -11,9 +11,14 @@ import (
 	"github.com/zubans/metrics/internal/config"
 	"github.com/zubans/metrics/internal/controllers"
 	"github.com/zubans/metrics/internal/services"
+	"github.com/zubans/metrics/internal/version"
+	"log"
+	"time"
 )
 
 func main() {
+	version.PrintBuildInfo()
+
 	var cfg = config.NewAgentConfig()
 
 	metricsService := services.NewMetricsService(cfg)

@@ -18,10 +18,23 @@ import (
 	"github.com/zubans/metrics/internal/router"
 	"github.com/zubans/metrics/internal/services"
 	"github.com/zubans/metrics/internal/storage"
+	"github.com/zubans/metrics/internal/version"
 	"go.uber.org/zap"
 )
 
-var cfg = config.NewServerConfig()
+func run(h http.Handler, addr string) error {
+	logger.Log.Info("Starting server on ", zap.String("address", addr))
+	return http.ListenAndServe(addr, h)
+}
+
+func main() {
+	version.PrintBuildInfo()
+
+	var cfg = config.NewServerConfig()
+
+	if err := logger.Initialize(cfg.FlagLogLevel); err != nil {
+		log.Printf("logger error: %v", err)
+	}
 
 func main() {
 	defer func() {
@@ -102,6 +115,9 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	<-stop
+	if err := run(middlewares.RequestLogger(r), cfg.RunAddr); err != nil {
+		log.Printf("Server failed to start: %v", err)
+	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
