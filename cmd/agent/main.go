@@ -12,8 +12,6 @@ import (
 	"github.com/zubans/metrics/internal/controllers"
 	"github.com/zubans/metrics/internal/services"
 	"github.com/zubans/metrics/internal/version"
-	"log"
-	"time"
 )
 
 func main() {

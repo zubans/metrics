@@ -22,11 +22,6 @@ import (
 	"go.uber.org/zap"
 )
 
-func run(h http.Handler, addr string) error {
-	logger.Log.Info("Starting server on ", zap.String("address", addr))
-	return http.ListenAndServe(addr, h)
-}
-
 func main() {
 	version.PrintBuildInfo()
 
@@ -36,7 +31,6 @@ func main() {
 		log.Printf("logger error: %v", err)
 	}
 
-func main() {
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Log.Info("CRITICAL panic occurred", zap.Any("error", r))
@@ -100,9 +94,6 @@ func main() {
 		}
 	}
 
-	if err := logger.Initialize(cfg.FlagLogLevel); err != nil {
-		log.Printf("logger error: %v", err)
-	}
 	srv := &http.Server{Addr: cfg.RunAddr, Handler: middlewares.RequestLogger(r)}
 
 	go func() {
@@ -115,9 +106,6 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	<-stop
-	if err := run(middlewares.RequestLogger(r), cfg.RunAddr); err != nil {
-		log.Printf("Server failed to start: %v", err)
-	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
