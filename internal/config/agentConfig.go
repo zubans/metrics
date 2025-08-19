@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"os"
-	"reflect"
 	"time"
 
 	"github.com/caarlos0/env/v6"
@@ -25,7 +24,6 @@ type agentFileConfig struct {
 }
 
 func NewAgentConfig() *AgentConfig {
-	// Defaults
 	cfg := AgentConfig{
 		AddressServer: "localhost:8080",
 		SendInterval:  10 * time.Second,
@@ -83,24 +81,17 @@ func NewAgentConfig() *AgentConfig {
 		}
 	}
 
-	err := env.ParseWithFuncs(&cfg, map[reflect.Type]env.ParserFunc{
-		reflect.TypeOf(time.Duration(0)): func(value string) (interface{}, error) {
-			num, err := time.ParseDuration(value)
-			if err == nil {
-				return num, nil
-			}
-			seconds, err := time.ParseDuration(value + "s")
-			if err != nil {
-				return nil, err
-			}
-			return seconds, nil
-		},
-	},
-	)
+	err := env.Parse(&cfg)
 	if err != nil {
 		return nil
 	}
 
+	applyAgentFlagOverrides(&cfg, addrFlag, repIntFlag, pollIntFlag, cryptoFlag)
+
+	return &cfg
+}
+
+func applyAgentFlagOverrides(cfg *AgentConfig, addrFlag string, repIntFlag int, pollIntFlag int, cryptoFlag string) {
 	setFlags := map[string]bool{}
 	flag.Visit(func(f *flag.Flag) {
 		setFlags[f.Name] = true
@@ -117,6 +108,4 @@ func NewAgentConfig() *AgentConfig {
 	if setFlags["crypto-key"] {
 		cfg.CryptoKey = cryptoFlag
 	}
-
-	return &cfg
 }

@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -31,20 +32,24 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	run(ctx, metricsController, cfg)
+	var wg sync.WaitGroup
+	run(ctx, &wg, metricsController, cfg)
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	<-sigCh
 
 	cancel()
-	time.Sleep(100 * time.Millisecond)
+	wg.Wait()
+
 	metricsController.OldJSONSendMetrics()
 	metricsController.JSONSendMetrics()
 }
 
-func run(ctx context.Context, metricsController *controllers.MetricsController, cfg *config.AgentConfig) {
+func run(ctx context.Context, wg *sync.WaitGroup, metricsController *controllers.MetricsController, cfg *config.AgentConfig) {
+	wg.Add(2)
 	go func() {
+		defer wg.Done()
 		ticker := time.NewTicker(cfg.PollInterval)
 		defer ticker.Stop()
 		for {
@@ -58,6 +63,7 @@ func run(ctx context.Context, metricsController *controllers.MetricsController, 
 	}()
 
 	go func() {
+		defer wg.Done()
 		ticker := time.NewTicker(cfg.SendInterval)
 		defer ticker.Stop()
 		for {

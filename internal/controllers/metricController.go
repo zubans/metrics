@@ -69,34 +69,22 @@ func (mc *MetricsController) JSONSendMetrics() {
 	}
 
 	var buf bytes.Buffer
-
 	gz := gzipNewWriter(&buf)
-
 	_, err = gz.Write(body)
 	if err != nil {
 		log.Println("Error compressing metric data")
 		return
 	}
-
 	err = gz.Close()
 	if err != nil {
 		log.Println("Error close gzip compressor")
 		return
 	}
 
-	var reqBody interface{}
-	var extraHeaders = map[string]string{}
-	if mc.publicKey != nil {
-		env, encErr := cryptoutil.EncryptHybrid(mc.publicKey, buf.Bytes())
-		if encErr != nil {
-			log.Printf("encryption failed: %v", encErr)
-			return
-		}
-		reqBody = env
-		extraHeaders["X-Encrypted"] = "1"
-		extraHeaders["Content-Encoding"] = ""
-	} else {
-		reqBody = buf.Bytes()
+	reqBody, extraHeaders, err := mc.prepareRequestBody(buf.Bytes())
+	if err != nil {
+		log.Printf("encryption failed: %v", err)
+		return
 	}
 
 	request := mc.httpClient.
@@ -108,7 +96,6 @@ func (mc *MetricsController) JSONSendMetrics() {
 			if attempt >= len(retryDelays) {
 				attempt = len(retryDelays) - 1
 			}
-
 			return retryDelays[attempt], nil
 		}).
 		R().
@@ -135,6 +122,20 @@ func (mc *MetricsController) JSONSendMetrics() {
 	} else {
 		log.Printf("Failed to send metric: %v, status code: %d\n", metrics, response.StatusCode())
 	}
+}
+
+func (mc *MetricsController) prepareRequestBody(data []byte) (interface{}, map[string]string, error) {
+	extraHeaders := map[string]string{}
+	if mc.publicKey != nil {
+		env, encErr := cryptoutil.EncryptHybrid(mc.publicKey, data)
+		if encErr != nil {
+			return nil, nil, encErr
+		}
+		extraHeaders["X-Encrypted"] = "1"
+		extraHeaders["Content-Encoding"] = ""
+		return env, extraHeaders, nil
+	}
+	return data, extraHeaders, nil
 }
 
 func (mc *MetricsController) OldJSONSendMetrics() {
