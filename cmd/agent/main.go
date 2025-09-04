@@ -1,12 +1,18 @@
 package main
 
 import (
+	"context"
+	"log"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+	"time"
+
 	"github.com/zubans/metrics/internal/config"
 	"github.com/zubans/metrics/internal/controllers"
 	"github.com/zubans/metrics/internal/services"
 	"github.com/zubans/metrics/internal/version"
-	"log"
-	"time"
 )
 
 func main() {
@@ -23,27 +29,51 @@ func main() {
 
 	metricsController := controllers.NewMetricsController(metricsService)
 
-	stopChan := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	run(metricsController, cfg)
+	var wg sync.WaitGroup
+	run(ctx, &wg, metricsController, cfg)
 
-	<-stopChan
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	<-sigCh
+
+	cancel()
+	wg.Wait()
+
+	metricsController.OldJSONSendMetrics()
+	metricsController.JSONSendMetrics()
 }
 
-func run(metricsController *controllers.MetricsController, cfg *config.AgentConfig) {
+func run(ctx context.Context, wg *sync.WaitGroup, metricsController *controllers.MetricsController, cfg *config.AgentConfig) {
+	wg.Add(2)
 	go func() {
+		defer wg.Done()
+		ticker := time.NewTicker(cfg.PollInterval)
+		defer ticker.Stop()
 		for {
-			metricsController.UpdateMetrics()
-			time.Sleep(cfg.PollInterval)
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				metricsController.UpdateMetrics()
+			}
 		}
 	}()
 
 	go func() {
+		defer wg.Done()
+		ticker := time.NewTicker(cfg.SendInterval)
+		defer ticker.Stop()
 		for {
-			time.Sleep(cfg.SendInterval)
-
-			metricsController.OldJSONSendMetrics()
-			metricsController.JSONSendMetrics()
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				metricsController.OldJSONSendMetrics()
+				metricsController.JSONSendMetrics()
+			}
 		}
 	}()
 }

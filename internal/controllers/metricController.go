@@ -3,14 +3,15 @@ package controllers
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 	"github.com/go-resty/resty/v2"
+	"github.com/zubans/metrics/internal/cryptoutil"
 	"github.com/zubans/metrics/internal/models"
 	"github.com/zubans/metrics/internal/services"
 	"io"
 	"log"
-	"net/http"
 	"time"
 )
 
@@ -26,14 +27,23 @@ type MetricControllerer interface {
 type MetricsController struct {
 	metricsService *services.MetricsService
 	httpClient     *resty.Client
+	publicKey      *rsa.PublicKey
 }
 
 func NewMetricsController(metricsService *services.MetricsService) *MetricsController {
-	return &MetricsController{
+	mc := &MetricsController{
 		metricsService: metricsService,
 		httpClient: resty.New().
 			SetTimeout(3 * time.Second),
 	}
+	if metricsService.Cfg != nil && metricsService.Cfg.CryptoKey != "" {
+		if pub, err := cryptoutil.LoadPublicKey(metricsService.Cfg.CryptoKey); err == nil {
+			mc.publicKey = pub
+		} else {
+			log.Printf("failed to load public key: %v", err)
+		}
+	}
+	return mc
 }
 
 func (mc *MetricsController) UpdateMetrics() {
@@ -59,22 +69,25 @@ func (mc *MetricsController) JSONSendMetrics() {
 	}
 
 	var buf bytes.Buffer
-
 	gz := gzipNewWriter(&buf)
-
 	_, err = gz.Write(body)
 	if err != nil {
 		log.Println("Error compressing metric data")
 		return
 	}
-
 	err = gz.Close()
 	if err != nil {
 		log.Println("Error close gzip compressor")
 		return
 	}
 
-	response, err := mc.httpClient.
+	reqBody, extraHeaders, err := mc.prepareRequestBody(buf.Bytes())
+	if err != nil {
+		log.Printf("encryption failed: %v", err)
+		return
+	}
+
+	request := mc.httpClient.
 		SetRetryCount(3).
 		SetRetryWaitTime(1*time.Second).
 		SetRetryMaxWaitTime(5*time.Second).
@@ -83,14 +96,21 @@ func (mc *MetricsController) JSONSendMetrics() {
 			if attempt >= len(retryDelays) {
 				attempt = len(retryDelays) - 1
 			}
-
 			return retryDelays[attempt], nil
 		}).
 		R().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Content-Encoding", "gzip").
-		SetBody(buf.Bytes()).
-		Post(url)
+		SetHeader("Content-Type", "application/json")
+
+	if mc.publicKey == nil {
+		request = request.SetHeader("Content-Encoding", "gzip")
+	}
+	for k, v := range extraHeaders {
+		if v == "" {
+			continue
+		}
+		request = request.SetHeader(k, v)
+	}
+	response, err := request.SetBody(reqBody).Post(url)
 
 	if err != nil {
 		log.Printf("Error sending metric: %v. BODY: %v\n", err, metrics)
@@ -102,6 +122,20 @@ func (mc *MetricsController) JSONSendMetrics() {
 	} else {
 		log.Printf("Failed to send metric: %v, status code: %d\n", metrics, response.StatusCode())
 	}
+}
+
+func (mc *MetricsController) prepareRequestBody(data []byte) (interface{}, map[string]string, error) {
+	extraHeaders := map[string]string{}
+	if mc.publicKey != nil {
+		env, encErr := cryptoutil.EncryptHybrid(mc.publicKey, data)
+		if encErr != nil {
+			return nil, nil, encErr
+		}
+		extraHeaders["X-Encrypted"] = "1"
+		extraHeaders["Content-Encoding"] = ""
+		return env, extraHeaders, nil
+	}
+	return data, extraHeaders, nil
 }
 
 func (mc *MetricsController) OldJSONSendMetrics() {
@@ -132,15 +166,34 @@ func (mc *MetricsController) OldJSONSendMetrics() {
 			return
 		}
 
-		req, _ := http.NewRequest("POST", url, &buf)
+		var reqBody interface{}
+		var extraHeaders = map[string]string{}
+		if mc.publicKey != nil {
+			env, encErr := cryptoutil.EncryptHybrid(mc.publicKey, buf.Bytes())
+			if encErr != nil {
+				log.Printf("encryption failed: %v", encErr)
+				continue
+			}
+			reqBody = env
+			extraHeaders["X-Encrypted"] = "1"
+		} else {
+			reqBody = buf.Bytes()
+		}
 
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Content-Encoding", "gzip")
+		restyReq := mc.httpClient.R().
+			SetHeader("Content-Type", "application/json")
+		if mc.publicKey == nil {
+			restyReq = restyReq.SetHeader("Content-Encoding", "gzip")
+		}
+		for k, v := range extraHeaders {
+			if v == "" {
+				continue
+			}
+			restyReq = restyReq.SetHeader(k, v)
+		}
 
-		response, err := mc.httpClient.R().
-			SetHeader("Content-Type", "application/json").
-			SetHeader("Content-Encoding", "gzip").
-			SetBody(dtoMetrics).
+		response, err := restyReq.
+			SetBody(reqBody).
 			Post(url)
 		if err != nil {
 			log.Printf("Error sending metric %s: %v. BODY: %v\n", metric.ID, err, metric)

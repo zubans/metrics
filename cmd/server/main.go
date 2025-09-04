@@ -2,7 +2,16 @@ package main
 
 import (
 	"context"
+	"errors"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	"github.com/zubans/metrics/internal/config"
+	"github.com/zubans/metrics/internal/cryptoutil"
 	"github.com/zubans/metrics/internal/handler"
 	"github.com/zubans/metrics/internal/logger"
 	"github.com/zubans/metrics/internal/middlewares"
@@ -11,15 +20,7 @@ import (
 	"github.com/zubans/metrics/internal/storage"
 	"github.com/zubans/metrics/internal/version"
 	"go.uber.org/zap"
-	"log"
-	"net/http"
-	"time"
 )
-
-func run(h http.Handler, addr string) error {
-	logger.Log.Info("Starting server on ", zap.String("address", addr))
-	return http.ListenAndServe(addr, h)
-}
 
 func main() {
 	version.PrintBuildInfo()
@@ -78,18 +79,44 @@ func main() {
 
 	var serv = services.NewMetricService(actualStorage)
 	var memHandler = handler.NewHandler(serv)
-	r := router.GetRouter(memHandler)
 
-	if err := run(middlewares.RequestLogger(r), cfg.RunAddr); err != nil {
-		log.Printf("Server failed to start: %v", err)
+	var baseRouter = router.GetRouter(memHandler)
+	var r = baseRouter
+	if cfg.CryptoKey != "" {
+		priv, err := cryptoutil.LoadPrivateKey(cfg.CryptoKey)
+		if err != nil {
+			logger.Log.Info("failed to load private key", zap.Any("error", err))
+		} else {
+			decrypt := func(env *cryptoutil.Envelope) ([]byte, error) {
+				return cryptoutil.DecryptHybrid(priv, env)
+			}
+			r = middlewares.DecryptRequestMiddleware(decrypt)(baseRouter)
+		}
 	}
 
-	defer func() {
-		logger.Log.Info("Saving metrics before shutdown...")
-		if err := dump.SaveMetricToFile(context.Background()); err != nil {
-			logger.Log.Info("failed to save metrics: ", zap.Any("error", err))
-		} else {
-			logger.Log.Info("Metrics saved.")
+	srv := &http.Server{Addr: cfg.RunAddr, Handler: middlewares.RequestLogger(r)}
+
+	go func() {
+		logger.Log.Info("Starting server on ", zap.String("address", cfg.RunAddr))
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("Server failed to start: %v", err)
 		}
 	}()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	<-stop
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Server shutdown error: %v", err)
+	}
+
+	logger.Log.Info("Saving metrics before shutdown...")
+	if err := dump.SaveMetricToFile(context.Background()); err != nil {
+		logger.Log.Info("failed to save metrics: ", zap.Any("error", err))
+	} else {
+		logger.Log.Info("Metrics saved.")
+	}
 }
