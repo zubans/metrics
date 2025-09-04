@@ -28,6 +28,7 @@ func main() {
 	log.Printf("Send interval: %v, Poll interval: %v", cfg.SendInterval, cfg.PollInterval)
 
 	metricsController := controllers.NewMetricsController(metricsService)
+	defer metricsController.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

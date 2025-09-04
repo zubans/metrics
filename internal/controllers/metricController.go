@@ -6,13 +6,16 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"fmt"
-	"github.com/go-resty/resty/v2"
-	"github.com/zubans/metrics/internal/cryptoutil"
-	"github.com/zubans/metrics/internal/models"
-	"github.com/zubans/metrics/internal/services"
 	"io"
 	"log"
+	"net"
 	"time"
+
+	"github.com/go-resty/resty/v2"
+	"github.com/zubans/metrics/internal/cryptoutil"
+	"github.com/zubans/metrics/internal/grpc"
+	"github.com/zubans/metrics/internal/models"
+	"github.com/zubans/metrics/internal/services"
 )
 
 var gzipNewWriter = func(w io.Writer) *gzip.Writer {
@@ -28,6 +31,7 @@ type MetricsController struct {
 	metricsService *services.MetricsService
 	httpClient     *resty.Client
 	publicKey      *rsa.PublicKey
+	grpcClient     *grpc.Client
 }
 
 func NewMetricsController(metricsService *services.MetricsService) *MetricsController {
@@ -43,6 +47,15 @@ func NewMetricsController(metricsService *services.MetricsService) *MetricsContr
 			log.Printf("failed to load public key: %v", err)
 		}
 	}
+
+	if metricsService.Cfg != nil && metricsService.Cfg.UseGRPC {
+		if grpcClient, err := grpc.NewClient(metricsService.Cfg); err == nil {
+			mc.grpcClient = grpcClient
+		} else {
+			log.Printf("failed to create gRPC client: %v", err)
+		}
+	}
+
 	return mc
 }
 
@@ -51,6 +64,21 @@ func (mc *MetricsController) UpdateMetrics() {
 }
 
 func (mc *MetricsController) JSONSendMetrics() {
+	if mc.grpcClient != nil {
+		mc.sendMetricsGRPC()
+		return
+	}
+	mc.sendMetricsHTTP()
+}
+
+func (mc *MetricsController) sendMetricsGRPC() {
+	metrics := mc.metricsService.GetMetrics()
+	if err := mc.grpcClient.SendMetrics(metrics); err != nil {
+		log.Printf("Error sending metrics via gRPC: %v", err)
+	}
+}
+
+func (mc *MetricsController) sendMetricsHTTP() {
 	retryDelays := []time.Duration{
 		1 * time.Second,
 		3 * time.Second,
@@ -99,7 +127,8 @@ func (mc *MetricsController) JSONSendMetrics() {
 			return retryDelays[attempt], nil
 		}).
 		R().
-		SetHeader("Content-Type", "application/json")
+		SetHeader("Content-Type", "application/json").
+		SetHeader("X-Real-IP", detectHostIP())
 
 	if mc.publicKey == nil {
 		request = request.SetHeader("Content-Encoding", "gzip")
@@ -139,6 +168,23 @@ func (mc *MetricsController) prepareRequestBody(data []byte) (interface{}, map[s
 }
 
 func (mc *MetricsController) OldJSONSendMetrics() {
+	if mc.grpcClient != nil {
+		mc.sendSingleMetricsGRPC()
+		return
+	}
+	mc.sendSingleMetricsHTTP()
+}
+
+func (mc *MetricsController) sendSingleMetricsGRPC() {
+	metrics := mc.metricsService.GetMetrics()
+	for _, metric := range metrics.MetricList {
+		if err := mc.grpcClient.SendSingleMetric(metric); err != nil {
+			log.Printf("Error sending metric %s via gRPC: %v", metric.Name, err)
+		}
+	}
+}
+
+func (mc *MetricsController) sendSingleMetricsHTTP() {
 	metrics := mc.metricsService.GetMetrics()
 	dtoMetrics := models.ConvertMetricsListToDTO(metrics.MetricList)
 
@@ -181,7 +227,8 @@ func (mc *MetricsController) OldJSONSendMetrics() {
 		}
 
 		restyReq := mc.httpClient.R().
-			SetHeader("Content-Type", "application/json")
+			SetHeader("Content-Type", "application/json").
+			SetHeader("X-Real-IP", detectHostIP())
 		if mc.publicKey == nil {
 			restyReq = restyReq.SetHeader("Content-Encoding", "gzip")
 		}
@@ -204,6 +251,39 @@ func (mc *MetricsController) OldJSONSendMetrics() {
 			log.Printf("Successfully sent metric: %s\n", metric.ID)
 		} else {
 			log.Printf("Failed to send metric: %s, status code: %d\n", metric.ID, response.StatusCode())
+		}
+	}
+}
+
+func detectHostIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+	for _, addr := range addrs {
+		var ip net.IP
+		switch v := addr.(type) {
+		case *net.IPNet:
+			ip = v.IP
+		case *net.IPAddr:
+			ip = v.IP
+		}
+		if ip == nil || ip.IsLoopback() {
+			continue
+		}
+		ip = ip.To4()
+		if ip == nil {
+			continue
+		}
+		return ip.String()
+	}
+	return ""
+}
+
+func (mc *MetricsController) Close() {
+	if mc.grpcClient != nil {
+		if err := mc.grpcClient.Close(); err != nil {
+			log.Printf("Error closing gRPC client: %v", err)
 		}
 	}
 }

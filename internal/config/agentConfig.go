@@ -14,6 +14,8 @@ type AgentConfig struct {
 	SendInterval  time.Duration `env:"REPORT_INTERVAL"`
 	PollInterval  time.Duration `env:"POLL_INTERVAL"`
 	CryptoKey     string        `env:"CRYPTO_KEY"`
+	GRPCAddress   string        `env:"GRPC_ADDRESS"`
+	UseGRPC       bool          `env:"USE_GRPC"`
 }
 
 type agentFileConfig struct {
@@ -21,6 +23,8 @@ type agentFileConfig struct {
 	ReportInterval *string `json:"report_interval"`
 	PollInterval   *string `json:"poll_interval"`
 	CryptoKey      *string `json:"crypto_key"`
+	GRPCAddress    *string `json:"grpc_address"`
+	UseGRPC        *bool   `json:"use_grpc"`
 }
 
 func NewAgentConfig() *AgentConfig {
@@ -29,6 +33,8 @@ func NewAgentConfig() *AgentConfig {
 		SendInterval:  10 * time.Second,
 		PollInterval:  2 * time.Second,
 		CryptoKey:     "",
+		GRPCAddress:   "localhost:8090",
+		UseGRPC:       false,
 	}
 
 	configEnvPath := os.Getenv("CONFIG")
@@ -38,6 +44,8 @@ func NewAgentConfig() *AgentConfig {
 		repIntFlag    int
 		pollIntFlag   int
 		cryptoFlag    string
+		grpcAddrFlag  string
+		useGRPCFlag   bool
 		configFlag    string
 		configFlagAlt string
 	)
@@ -45,6 +53,8 @@ func NewAgentConfig() *AgentConfig {
 	flag.IntVar(&repIntFlag, "r", int(cfg.SendInterval/time.Second), "report send interval")
 	flag.IntVar(&pollIntFlag, "p", int(cfg.PollInterval/time.Second), "poll interval")
 	flag.StringVar(&cryptoFlag, "crypto-key", cfg.CryptoKey, "path to RSA public key (PEM)")
+	flag.StringVar(&grpcAddrFlag, "grpc-addr", cfg.GRPCAddress, "gRPC server address")
+	flag.BoolVar(&useGRPCFlag, "use-grpc", cfg.UseGRPC, "use gRPC instead of HTTP")
 	flag.StringVar(&configFlag, "config", "", "path to JSON config file")
 	flag.StringVar(&configFlagAlt, "c", "", "path to JSON config file (short)")
 	flag.Parse()
@@ -77,6 +87,12 @@ func NewAgentConfig() *AgentConfig {
 				if fc.CryptoKey != nil {
 					cfg.CryptoKey = *fc.CryptoKey
 				}
+				if fc.GRPCAddress != nil {
+					cfg.GRPCAddress = *fc.GRPCAddress
+				}
+				if fc.UseGRPC != nil {
+					cfg.UseGRPC = *fc.UseGRPC
+				}
 			}
 		}
 	}
@@ -86,12 +102,12 @@ func NewAgentConfig() *AgentConfig {
 		return nil
 	}
 
-	applyAgentFlagOverrides(&cfg, addrFlag, repIntFlag, pollIntFlag, cryptoFlag)
+	applyAgentFlagOverrides(&cfg, addrFlag, repIntFlag, pollIntFlag, cryptoFlag, grpcAddrFlag, useGRPCFlag)
 
 	return &cfg
 }
 
-func applyAgentFlagOverrides(cfg *AgentConfig, addrFlag string, repIntFlag int, pollIntFlag int, cryptoFlag string) {
+func applyAgentFlagOverrides(cfg *AgentConfig, addrFlag string, repIntFlag int, pollIntFlag int, cryptoFlag string, grpcAddrFlag string, useGRPCFlag bool) {
 	setFlags := map[string]bool{}
 	flag.Visit(func(f *flag.Flag) {
 		setFlags[f.Name] = true
@@ -107,5 +123,11 @@ func applyAgentFlagOverrides(cfg *AgentConfig, addrFlag string, repIntFlag int, 
 	}
 	if setFlags["crypto-key"] {
 		cfg.CryptoKey = cryptoFlag
+	}
+	if setFlags["grpc-addr"] {
+		cfg.GRPCAddress = grpcAddrFlag
+	}
+	if setFlags["use-grpc"] {
+		cfg.UseGRPC = useGRPCFlag
 	}
 }
