@@ -6,13 +6,15 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
+	"net"
+	"time"
+
 	"github.com/go-resty/resty/v2"
 	"github.com/zubans/metrics/internal/cryptoutil"
 	"github.com/zubans/metrics/internal/models"
 	"github.com/zubans/metrics/internal/services"
-	"io"
-	"log"
-	"time"
 )
 
 var gzipNewWriter = func(w io.Writer) *gzip.Writer {
@@ -99,7 +101,8 @@ func (mc *MetricsController) JSONSendMetrics() {
 			return retryDelays[attempt], nil
 		}).
 		R().
-		SetHeader("Content-Type", "application/json")
+		SetHeader("Content-Type", "application/json").
+		SetHeader("X-Real-IP", detectHostIP())
 
 	if mc.publicKey == nil {
 		request = request.SetHeader("Content-Encoding", "gzip")
@@ -181,7 +184,8 @@ func (mc *MetricsController) OldJSONSendMetrics() {
 		}
 
 		restyReq := mc.httpClient.R().
-			SetHeader("Content-Type", "application/json")
+			SetHeader("Content-Type", "application/json").
+			SetHeader("X-Real-IP", detectHostIP())
 		if mc.publicKey == nil {
 			restyReq = restyReq.SetHeader("Content-Encoding", "gzip")
 		}
@@ -206,4 +210,29 @@ func (mc *MetricsController) OldJSONSendMetrics() {
 			log.Printf("Failed to send metric: %s, status code: %d\n", metric.ID, response.StatusCode())
 		}
 	}
+}
+
+func detectHostIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+	for _, addr := range addrs {
+		var ip net.IP
+		switch v := addr.(type) {
+		case *net.IPNet:
+			ip = v.IP
+		case *net.IPAddr:
+			ip = v.IP
+		}
+		if ip == nil || ip.IsLoopback() {
+			continue
+		}
+		ip = ip.To4()
+		if ip == nil {
+			continue
+		}
+		return ip.String()
+	}
+	return ""
 }

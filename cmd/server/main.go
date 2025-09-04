@@ -93,6 +93,9 @@ func main() {
 			r = middlewares.DecryptRequestMiddleware(decrypt)(baseRouter)
 		}
 	}
+	if cfg.TrustedSubnet != "" {
+		r = middlewares.TrustedSubnetMiddleware(cfg.TrustedSubnet)(r)
+	}
 
 	srv := &http.Server{Addr: cfg.RunAddr, Handler: middlewares.RequestLogger(r)}
 

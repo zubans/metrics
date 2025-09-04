@@ -21,6 +21,7 @@ type Config struct {
 	Restore         bool          `env:"RESTORE"`
 	DBCfg           string        `env:"DATABASE_DSN"`
 	CryptoKey       string        `env:"CRYPTO_KEY"`
+	TrustedSubnet   string        `env:"TRUSTED_SUBNET"`
 }
 
 type serverFileConfig struct {
@@ -30,6 +31,7 @@ type serverFileConfig struct {
 	StoreFile     *string `json:"store_file"`
 	DatabaseDSN   *string `json:"database_dsn"`
 	CryptoKey     *string `json:"crypto_key"`
+	TrustedSubnet *string `json:"trusted_subnet"`
 }
 
 func NewServerConfig() *Config {
@@ -41,6 +43,7 @@ func NewServerConfig() *Config {
 		Restore:         true,
 		DBCfg:           "",
 		CryptoKey:       "",
+		TrustedSubnet:   "",
 	}
 
 	configEnvPath := os.Getenv("CONFIG")
@@ -53,6 +56,7 @@ func NewServerConfig() *Config {
 		db            string
 		isRestore     bool
 		cryptoFlag    string
+		trustedFlag   string
 		configFlag    string
 		configFlagAlt string
 	)
@@ -63,6 +67,7 @@ func NewServerConfig() *Config {
 	flag.StringVar(&db, "d", cfg.DBCfg, "db credential")
 	flag.BoolVar(&isRestore, "r", cfg.Restore, "bool value. Ability to restore metrics from file")
 	flag.StringVar(&cryptoFlag, "crypto-key", cfg.CryptoKey, "path to RSA private key (PEM)")
+	flag.StringVar(&trustedFlag, "t", cfg.TrustedSubnet, "trusted subnet in CIDR notation")
 	flag.StringVar(&configFlag, "config", "", "path to JSON config file")
 	flag.StringVar(&configFlagAlt, "c", "", "path to JSON config file (short)")
 
@@ -99,6 +104,9 @@ func NewServerConfig() *Config {
 				}
 				if fc.CryptoKey != nil {
 					cfg.CryptoKey = *fc.CryptoKey
+				}
+				if fc.TrustedSubnet != nil {
+					cfg.TrustedSubnet = *fc.TrustedSubnet
 				}
 			}
 		}
@@ -147,6 +155,9 @@ func NewServerConfig() *Config {
 	}
 	if setFlags["crypto-key"] {
 		cfg.CryptoKey = cryptoFlag
+	}
+	if setFlags["t"] {
+		cfg.TrustedSubnet = trustedFlag
 	}
 
 	return &cfg

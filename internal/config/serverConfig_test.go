@@ -38,6 +38,7 @@ func clearServerEnv(tb testing.TB) {
 	_ = os.Unsetenv("RESTORE")
 	_ = os.Unsetenv("DATABASE_DSN")
 	_ = os.Unsetenv("CRYPTO_KEY")
+	_ = os.Unsetenv("TRUSTED_SUBNET")
 }
 
 func TestServerConfig_FileOnly(t *testing.T) {
@@ -169,5 +170,45 @@ func TestServerConfig_FlagsOverrideEnvAndFile(t *testing.T) {
 	}
 	if cfg.CryptoKey != "flag.pem" {
 		t.Fatalf("crypto=%q", cfg.CryptoKey)
+	}
+}
+
+func TestServerConfig_TrustedSubnet_FromFile(t *testing.T) {
+	t.Cleanup(func() { clearServerEnv(t) })
+	clearServerEnv(t)
+	dir := t.TempDir()
+	p := writeServerJSON(t, dir, map[string]any{
+		"trusted_subnet": "10.0.0.0/8",
+	})
+	_ = os.Setenv("CONFIG", p)
+	resetServerFlagsArgs(t, []string{"server"})
+
+	cfg := NewServerConfig()
+	if cfg.TrustedSubnet != "10.0.0.0/8" {
+		t.Fatalf("trusted=%q", cfg.TrustedSubnet)
+	}
+}
+
+func TestServerConfig_TrustedSubnet_FromEnv(t *testing.T) {
+	t.Cleanup(func() { clearServerEnv(t) })
+	clearServerEnv(t)
+	_ = os.Setenv("TRUSTED_SUBNET", "192.168.0.0/16")
+	resetServerFlagsArgs(t, []string{"server"})
+
+	cfg := NewServerConfig()
+	if cfg.TrustedSubnet != "192.168.0.0/16" {
+		t.Fatalf("trusted=%q", cfg.TrustedSubnet)
+	}
+}
+
+func TestServerConfig_TrustedSubnet_FlagOverrides(t *testing.T) {
+	t.Cleanup(func() { clearServerEnv(t) })
+	clearServerEnv(t)
+	_ = os.Setenv("TRUSTED_SUBNET", "192.168.0.0/16")
+	resetServerFlagsArgs(t, []string{"server", "-t", "172.16.0.0/12"})
+
+	cfg := NewServerConfig()
+	if cfg.TrustedSubnet != "172.16.0.0/12" {
+		t.Fatalf("trusted=%q", cfg.TrustedSubnet)
 	}
 }
