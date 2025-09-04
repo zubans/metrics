@@ -12,6 +12,7 @@ import (
 
 	"github.com/zubans/metrics/internal/config"
 	"github.com/zubans/metrics/internal/cryptoutil"
+	"github.com/zubans/metrics/internal/grpc"
 	"github.com/zubans/metrics/internal/handler"
 	"github.com/zubans/metrics/internal/logger"
 	"github.com/zubans/metrics/internal/middlewares"
@@ -100,11 +101,21 @@ func main() {
 	srv := &http.Server{Addr: cfg.RunAddr, Handler: middlewares.RequestLogger(r)}
 
 	go func() {
-		logger.Log.Info("Starting server on ", zap.String("address", cfg.RunAddr))
+		logger.Log.Info("Starting HTTP server on ", zap.String("address", cfg.RunAddr))
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("Server failed to start: %v", err)
+			log.Printf("HTTP server failed to start: %v", err)
 		}
 	}()
+
+	var grpcServer *grpc.Server
+	if cfg.EnableGRPC {
+		grpcServer = grpc.NewServer(serv, cfg)
+		go func() {
+			if err := grpcServer.Start(); err != nil {
+				log.Printf("gRPC server failed to start: %v", err)
+			}
+		}()
+	}
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)

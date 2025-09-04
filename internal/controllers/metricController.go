@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/zubans/metrics/internal/cryptoutil"
+	"github.com/zubans/metrics/internal/grpc"
 	"github.com/zubans/metrics/internal/models"
 	"github.com/zubans/metrics/internal/services"
 )
@@ -30,6 +31,7 @@ type MetricsController struct {
 	metricsService *services.MetricsService
 	httpClient     *resty.Client
 	publicKey      *rsa.PublicKey
+	grpcClient     *grpc.Client
 }
 
 func NewMetricsController(metricsService *services.MetricsService) *MetricsController {
@@ -45,6 +47,15 @@ func NewMetricsController(metricsService *services.MetricsService) *MetricsContr
 			log.Printf("failed to load public key: %v", err)
 		}
 	}
+
+	if metricsService.Cfg != nil && metricsService.Cfg.UseGRPC {
+		if grpcClient, err := grpc.NewClient(metricsService.Cfg); err == nil {
+			mc.grpcClient = grpcClient
+		} else {
+			log.Printf("failed to create gRPC client: %v", err)
+		}
+	}
+
 	return mc
 }
 
@@ -53,6 +64,21 @@ func (mc *MetricsController) UpdateMetrics() {
 }
 
 func (mc *MetricsController) JSONSendMetrics() {
+	if mc.grpcClient != nil {
+		mc.sendMetricsGRPC()
+		return
+	}
+	mc.sendMetricsHTTP()
+}
+
+func (mc *MetricsController) sendMetricsGRPC() {
+	metrics := mc.metricsService.GetMetrics()
+	if err := mc.grpcClient.SendMetrics(metrics); err != nil {
+		log.Printf("Error sending metrics via gRPC: %v", err)
+	}
+}
+
+func (mc *MetricsController) sendMetricsHTTP() {
 	retryDelays := []time.Duration{
 		1 * time.Second,
 		3 * time.Second,
@@ -142,6 +168,23 @@ func (mc *MetricsController) prepareRequestBody(data []byte) (interface{}, map[s
 }
 
 func (mc *MetricsController) OldJSONSendMetrics() {
+	if mc.grpcClient != nil {
+		mc.sendSingleMetricsGRPC()
+		return
+	}
+	mc.sendSingleMetricsHTTP()
+}
+
+func (mc *MetricsController) sendSingleMetricsGRPC() {
+	metrics := mc.metricsService.GetMetrics()
+	for _, metric := range metrics.MetricList {
+		if err := mc.grpcClient.SendSingleMetric(metric); err != nil {
+			log.Printf("Error sending metric %s via gRPC: %v", metric.Name, err)
+		}
+	}
+}
+
+func (mc *MetricsController) sendSingleMetricsHTTP() {
 	metrics := mc.metricsService.GetMetrics()
 	dtoMetrics := models.ConvertMetricsListToDTO(metrics.MetricList)
 
@@ -235,4 +278,12 @@ func detectHostIP() string {
 		return ip.String()
 	}
 	return ""
+}
+
+func (mc *MetricsController) Close() {
+	if mc.grpcClient != nil {
+		if err := mc.grpcClient.Close(); err != nil {
+			log.Printf("Error closing gRPC client: %v", err)
+		}
+	}
 }

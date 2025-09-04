@@ -22,6 +22,8 @@ type Config struct {
 	DBCfg           string        `env:"DATABASE_DSN"`
 	CryptoKey       string        `env:"CRYPTO_KEY"`
 	TrustedSubnet   string        `env:"TRUSTED_SUBNET"`
+	GRPCAddr        string        `env:"GRPC_ADDRESS"`
+	EnableGRPC      bool          `env:"ENABLE_GRPC"`
 }
 
 type serverFileConfig struct {
@@ -32,6 +34,8 @@ type serverFileConfig struct {
 	DatabaseDSN   *string `json:"database_dsn"`
 	CryptoKey     *string `json:"crypto_key"`
 	TrustedSubnet *string `json:"trusted_subnet"`
+	GRPCAddress   *string `json:"grpc_address"`
+	EnableGRPC    *bool   `json:"enable_grpc"`
 }
 
 func NewServerConfig() *Config {
@@ -44,21 +48,25 @@ func NewServerConfig() *Config {
 		DBCfg:           "",
 		CryptoKey:       "",
 		TrustedSubnet:   "",
+		GRPCAddr:        "localhost:8090",
+		EnableGRPC:      false,
 	}
 
 	configEnvPath := os.Getenv("CONFIG")
 
 	var (
-		addrFlag      string
-		flagLogLevel  string
-		storeInterval int
-		storagePath   string
-		db            string
-		isRestore     bool
-		cryptoFlag    string
-		trustedFlag   string
-		configFlag    string
-		configFlagAlt string
+		addrFlag       string
+		flagLogLevel   string
+		storeInterval  int
+		storagePath    string
+		db             string
+		isRestore      bool
+		cryptoFlag     string
+		trustedFlag    string
+		grpcAddrFlag   string
+		enableGRPCFlag bool
+		configFlag     string
+		configFlagAlt  string
 	)
 	flag.StringVar(&addrFlag, "a", cfg.RunAddr, "address and port to run server")
 	flag.StringVar(&flagLogLevel, "l", cfg.FlagLogLevel, "log level")
@@ -68,6 +76,8 @@ func NewServerConfig() *Config {
 	flag.BoolVar(&isRestore, "r", cfg.Restore, "bool value. Ability to restore metrics from file")
 	flag.StringVar(&cryptoFlag, "crypto-key", cfg.CryptoKey, "path to RSA private key (PEM)")
 	flag.StringVar(&trustedFlag, "t", cfg.TrustedSubnet, "trusted subnet in CIDR notation")
+	flag.StringVar(&grpcAddrFlag, "grpc-addr", cfg.GRPCAddr, "gRPC server address")
+	flag.BoolVar(&enableGRPCFlag, "enable-grpc", cfg.EnableGRPC, "enable gRPC server")
 	flag.StringVar(&configFlag, "config", "", "path to JSON config file")
 	flag.StringVar(&configFlagAlt, "c", "", "path to JSON config file (short)")
 
@@ -107,6 +117,12 @@ func NewServerConfig() *Config {
 				}
 				if fc.TrustedSubnet != nil {
 					cfg.TrustedSubnet = *fc.TrustedSubnet
+				}
+				if fc.GRPCAddress != nil {
+					cfg.GRPCAddr = *fc.GRPCAddress
+				}
+				if fc.EnableGRPC != nil {
+					cfg.EnableGRPC = *fc.EnableGRPC
 				}
 			}
 		}
@@ -158,6 +174,12 @@ func NewServerConfig() *Config {
 	}
 	if setFlags["t"] {
 		cfg.TrustedSubnet = trustedFlag
+	}
+	if setFlags["grpc-addr"] {
+		cfg.GRPCAddr = grpcAddrFlag
+	}
+	if setFlags["enable-grpc"] {
+		cfg.EnableGRPC = enableGRPCFlag
 	}
 
 	return &cfg
