@@ -24,6 +24,10 @@ type Config struct {
 	TrustedSubnet   string        `env:"TRUSTED_SUBNET"`
 	GRPCAddr        string        `env:"GRPC_ADDRESS"`
 	EnableGRPC      bool          `env:"ENABLE_GRPC"`
+	// Timeouts
+	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT"`
+	HTTPTimeout     time.Duration `env:"HTTP_TIMEOUT"`
+	GRPCTimeout     time.Duration `env:"GRPC_TIMEOUT"`
 }
 
 type serverFileConfig struct {
@@ -50,6 +54,10 @@ func NewServerConfig() *Config {
 		TrustedSubnet:   "",
 		GRPCAddr:        "localhost:8090",
 		EnableGRPC:      false,
+		// Default timeouts
+		ShutdownTimeout: 10 * time.Second,
+		HTTPTimeout:     3 * time.Second,
+		GRPCTimeout:     3 * time.Second,
 	}
 
 	configEnvPath := os.Getenv("CONFIG")
@@ -67,6 +75,10 @@ func NewServerConfig() *Config {
 		enableGRPCFlag bool
 		configFlag     string
 		configFlagAlt  string
+		// Timeout flags
+		shutdownTimeoutFlag int
+		httpTimeoutFlag     int
+		grpcTimeoutFlag     int
 	)
 	flag.StringVar(&addrFlag, "a", cfg.RunAddr, "address and port to run server")
 	flag.StringVar(&flagLogLevel, "l", cfg.FlagLogLevel, "log level")
@@ -79,6 +91,10 @@ func NewServerConfig() *Config {
 	flag.StringVar(&grpcAddrFlag, "grpc-addr", cfg.GRPCAddr, "gRPC server address")
 	flag.BoolVar(&enableGRPCFlag, "enable-grpc", cfg.EnableGRPC, "enable gRPC server")
 	flag.StringVar(&configFlag, "config", "", "path to JSON config file")
+	// Timeout flags
+	flag.IntVar(&shutdownTimeoutFlag, "shutdown-timeout", int(cfg.ShutdownTimeout/time.Second), "shutdown timeout in seconds")
+	flag.IntVar(&httpTimeoutFlag, "http-timeout", int(cfg.HTTPTimeout/time.Second), "HTTP timeout in seconds")
+	flag.IntVar(&grpcTimeoutFlag, "grpc-timeout", int(cfg.GRPCTimeout/time.Second), "gRPC timeout in seconds")
 	flag.StringVar(&configFlagAlt, "c", "", "path to JSON config file (short)")
 
 	flag.Parse()
@@ -180,6 +196,16 @@ func NewServerConfig() *Config {
 	}
 	if setFlags["enable-grpc"] {
 		cfg.EnableGRPC = enableGRPCFlag
+	}
+	// Timeout flags
+	if setFlags["shutdown-timeout"] {
+		cfg.ShutdownTimeout = time.Duration(shutdownTimeoutFlag) * time.Second
+	}
+	if setFlags["http-timeout"] {
+		cfg.HTTPTimeout = time.Duration(httpTimeoutFlag) * time.Second
+	}
+	if setFlags["grpc-timeout"] {
+		cfg.GRPCTimeout = time.Duration(grpcTimeoutFlag) * time.Second
 	}
 
 	return &cfg

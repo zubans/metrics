@@ -16,6 +16,9 @@ type AgentConfig struct {
 	CryptoKey     string        `env:"CRYPTO_KEY"`
 	GRPCAddress   string        `env:"GRPC_ADDRESS"`
 	UseGRPC       bool          `env:"USE_GRPC"`
+	// Timeouts
+	HTTPTimeout time.Duration `env:"HTTP_TIMEOUT"`
+	GRPCTimeout time.Duration `env:"GRPC_TIMEOUT"`
 }
 
 type agentFileConfig struct {
@@ -35,6 +38,9 @@ func NewAgentConfig() *AgentConfig {
 		CryptoKey:     "",
 		GRPCAddress:   "localhost:8090",
 		UseGRPC:       false,
+		// Default timeouts
+		HTTPTimeout: 3 * time.Second,
+		GRPCTimeout: 3 * time.Second,
 	}
 
 	configEnvPath := os.Getenv("CONFIG")

@@ -63,3 +63,4 @@ service MetricsService {
   
   rpc Ping(PingRequest) returns (PingResponse);
 }
+

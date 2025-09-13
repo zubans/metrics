@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/zubans/metrics/internal/config"
 	"github.com/zubans/metrics/internal/models"
@@ -39,7 +38,7 @@ func (c *Client) Close() error {
 }
 
 func (c *Client) SendMetrics(metrics *models.Metrics) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), c.cfg.GRPCTimeout)
 	defer cancel()
 
 	var protoMetrics []*proto.Metric
@@ -66,7 +65,7 @@ func (c *Client) SendMetrics(metrics *models.Metrics) error {
 }
 
 func (c *Client) SendSingleMetric(metric models.Metric) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), c.cfg.GRPCTimeout)
 	defer cancel()
 
 	protoMetric := c.convertToProtoMetric(metric)
@@ -85,7 +84,7 @@ func (c *Client) SendSingleMetric(metric models.Metric) error {
 }
 
 func (c *Client) Ping() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), c.cfg.GRPCTimeout)
 	defer cancel()
 
 	req := &proto.PingRequest{}

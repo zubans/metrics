@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -29,14 +28,12 @@ func main() {
 	var cfg = config.NewServerConfig()
 
 	if err := logger.Initialize(cfg.FlagLogLevel); err != nil {
-		log.Printf("logger error: %v", err)
+		logger.Log.Error("logger initialization failed", zap.Error(err))
 	}
 
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Log.Info("CRITICAL panic occurred", zap.Any("error", r))
-			log.Printf("CRITICAL error %v", r)
-
 		}
 	}()
 
@@ -101,9 +98,9 @@ func main() {
 	srv := &http.Server{Addr: cfg.RunAddr, Handler: middlewares.RequestLogger(r)}
 
 	go func() {
-		logger.Log.Info("Starting HTTP server on ", zap.String("address", cfg.RunAddr))
+		logger.Log.Info("Starting HTTP server", zap.String("address", cfg.RunAddr))
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("HTTP server failed to start: %v", err)
+			logger.Log.Error("HTTP server failed to start", zap.Error(err))
 		}
 	}()
 
@@ -112,7 +109,7 @@ func main() {
 		grpcServer = grpc.NewServer(serv, cfg)
 		go func() {
 			if err := grpcServer.Start(); err != nil {
-				log.Printf("gRPC server failed to start: %v", err)
+				logger.Log.Error("gRPC server failed to start", zap.Error(err))
 			}
 		}()
 	}
@@ -121,16 +118,30 @@ func main() {
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	<-stop
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	logger.Log.Info("Shutdown signal received, starting graceful shutdown...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
+
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Printf("Server shutdown error: %v", err)
+		logger.Log.Error("HTTP server shutdown error", zap.Error(err))
+	} else {
+		logger.Log.Info("HTTP server stopped gracefully")
 	}
 
+	if grpcServer != nil {
+		if err := grpcServer.Stop(); err != nil {
+			logger.Log.Error("gRPC server shutdown error", zap.Error(err))
+		}
+	}
+
+	// Save metrics before shutdown
 	logger.Log.Info("Saving metrics before shutdown...")
 	if err := dump.SaveMetricToFile(context.Background()); err != nil {
 		logger.Log.Info("failed to save metrics: ", zap.Any("error", err))
 	} else {
 		logger.Log.Info("Metrics saved.")
 	}
+
+	logger.Log.Info("Server shutdown completed")
 }
