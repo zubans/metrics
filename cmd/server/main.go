@@ -135,7 +135,6 @@ func main() {
 		}
 	}
 
-	// Save metrics before shutdown
 	logger.Log.Info("Saving metrics before shutdown...")
 	if err := dump.SaveMetricToFile(context.Background()); err != nil {
 		logger.Log.Info("failed to save metrics: ", zap.Any("error", err))
