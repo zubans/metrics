@@ -1,22 +1,23 @@
 package handler_test
-package package handler_test
 
 import (
 	"bytes"
 	"context"
-	"github.com/go-chi/chi/v5"
-	"github.com/stretchr/testify/assert"
-	"github.com/zubans/metrics/internal/services"
-	"github.com/zubans/metrics/internal/storage"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/zubans/metrics/internal/handler"
+	"github.com/zubans/metrics/internal/services"
+	"github.com/zubans/metrics/internal/storage"
 )
 
 func TestHandler_UpdateMetricJSON(t *testing.T) {
 	newMemStorage := storage.NewMemStorage()
 	newService := services.NewMetricService(newMemStorage)
-	handler := NewHandler(newService)
+	handler := handler.NewHandler(newService)
 	tests := []struct {
 		name                string
 		requestData         string
@@ -70,7 +71,7 @@ func TestHandler_UpdateMetricJSON(t *testing.T) {
 func TestHandler_UpdateMetric(t *testing.T) {
 	newMemStorage := storage.NewMemStorage()
 	newService := services.NewMetricService(newMemStorage)
-	handler := NewHandler(newService)
+	handler := handler.NewHandler(newService)
 
 	tests := []struct {
 		name               string

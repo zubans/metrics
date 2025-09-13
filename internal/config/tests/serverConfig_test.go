@@ -1,5 +1,4 @@
 package config_test
-package package config_test
 
 import (
 	"encoding/json"
@@ -8,6 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/zubans/metrics/internal/config"
 )
 
 func resetServerFlagsArgs(tb testing.TB, args []string) {
@@ -57,7 +58,7 @@ func TestServerConfig_FileOnly(t *testing.T) {
 	_ = os.Setenv("CONFIG", p)
 	resetServerFlagsArgs(t, []string{"server"})
 
-	cfg := NewServerConfig()
+	cfg := config.NewServerConfig()
 	if cfg.RunAddr != "srv:1" {
 		t.Fatalf("addr=%q", cfg.RunAddr)
 	}
@@ -99,7 +100,7 @@ func TestServerConfig_EnvOverridesFile(t *testing.T) {
 	_ = os.Setenv("CRYPTO_KEY", "env.pem")
 	resetServerFlagsArgs(t, []string{"server"})
 
-	cfg := NewServerConfig()
+	cfg := config.NewServerConfig()
 	if cfg.RunAddr != "env:2" {
 		t.Fatalf("addr=%q", cfg.RunAddr)
 	}
@@ -150,7 +151,7 @@ func TestServerConfig_FlagsOverrideEnvAndFile(t *testing.T) {
 		"-crypto-key", "flag.pem",
 	})
 
-	cfg := NewServerConfig()
+	cfg := config.NewServerConfig()
 	if cfg.RunAddr != "flag:3" {
 		t.Fatalf("addr=%q", cfg.RunAddr)
 	}
@@ -184,7 +185,7 @@ func TestServerConfig_TrustedSubnet_FromFile(t *testing.T) {
 	_ = os.Setenv("CONFIG", p)
 	resetServerFlagsArgs(t, []string{"server"})
 
-	cfg := NewServerConfig()
+	cfg := config.NewServerConfig()
 	if cfg.TrustedSubnet != "10.0.0.0/8" {
 		t.Fatalf("trusted=%q", cfg.TrustedSubnet)
 	}
@@ -196,7 +197,7 @@ func TestServerConfig_TrustedSubnet_FromEnv(t *testing.T) {
 	_ = os.Setenv("TRUSTED_SUBNET", "192.168.0.0/16")
 	resetServerFlagsArgs(t, []string{"server"})
 
-	cfg := NewServerConfig()
+	cfg := config.NewServerConfig()
 	if cfg.TrustedSubnet != "192.168.0.0/16" {
 		t.Fatalf("trusted=%q", cfg.TrustedSubnet)
 	}
@@ -208,7 +209,7 @@ func TestServerConfig_TrustedSubnet_FlagOverrides(t *testing.T) {
 	_ = os.Setenv("TRUSTED_SUBNET", "192.168.0.0/16")
 	resetServerFlagsArgs(t, []string{"server", "-t", "172.16.0.0/12"})
 
-	cfg := NewServerConfig()
+	cfg := config.NewServerConfig()
 	if cfg.TrustedSubnet != "172.16.0.0/12" {
 		t.Fatalf("trusted=%q", cfg.TrustedSubnet)
 	}

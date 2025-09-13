@@ -1,5 +1,4 @@
 package config_test
-package package config_test
 
 import (
 	"encoding/json"
@@ -8,6 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/zubans/metrics/internal/config"
 )
 
 func resetFlagsAndArgs(tb testing.TB, args []string) {
@@ -53,7 +54,7 @@ func TestAgentConfig_FileOnly(t *testing.T) {
 	}
 	resetFlagsAndArgs(t, []string{"agent"})
 
-	cfg := NewAgentConfig()
+	cfg := config.NewAgentConfig()
 	if cfg == nil {
 		t.Fatal("cfg is nil")
 	}
@@ -88,7 +89,7 @@ func TestAgentConfig_EnvOverridesFile(t *testing.T) {
 	_ = os.Setenv("CRYPTO_KEY", "env.pem")
 	resetFlagsAndArgs(t, []string{"agent"})
 
-	cfg := NewAgentConfig()
+	cfg := config.NewAgentConfig()
 	if cfg.AddressServer != "env:2" {
 		t.Fatalf("address=%q", cfg.AddressServer)
 	}
@@ -126,7 +127,7 @@ func TestAgentConfig_FlagsOverrideEnvAndFile(t *testing.T) {
 		"-crypto-key", "flag.pem",
 	})
 
-	cfg := NewAgentConfig()
+	cfg := config.NewAgentConfig()
 	if cfg.AddressServer != "flag:3" {
 		t.Fatalf("address=%q", cfg.AddressServer)
 	}

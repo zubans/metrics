@@ -1,10 +1,11 @@
 package middlewares_test
-package package middlewares_test
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/zubans/metrics/internal/middlewares"
 )
 
 func okHandler() http.Handler {
@@ -14,7 +15,7 @@ func okHandler() http.Handler {
 }
 
 func TestTrustedSubnetMiddleware_EmptyCIDR_Allows(t *testing.T) {
-	mw := TrustedSubnetMiddleware("")
+	mw := middlewares.TrustedSubnetMiddleware("")
 	req := httptest.NewRequest(http.MethodPost, "/updates/", nil)
 	req.Header.Set("X-Real-IP", "203.0.113.10")
 	rr := httptest.NewRecorder()
@@ -25,7 +26,7 @@ func TestTrustedSubnetMiddleware_EmptyCIDR_Allows(t *testing.T) {
 }
 
 func TestTrustedSubnetMiddleware_ValidCIDR_AllowInside(t *testing.T) {
-	mw := TrustedSubnetMiddleware("10.0.0.0/8")
+	mw := middlewares.TrustedSubnetMiddleware("10.0.0.0/8")
 	req := httptest.NewRequest(http.MethodPost, "/updates/", nil)
 	req.Header.Set("X-Real-IP", "10.1.2.3")
 	rr := httptest.NewRecorder()
@@ -36,7 +37,7 @@ func TestTrustedSubnetMiddleware_ValidCIDR_AllowInside(t *testing.T) {
 }
 
 func TestTrustedSubnetMiddleware_ValidCIDR_RejectOutside(t *testing.T) {
-	mw := TrustedSubnetMiddleware("192.168.0.0/16")
+	mw := middlewares.TrustedSubnetMiddleware("192.168.0.0/16")
 	req := httptest.NewRequest(http.MethodPost, "/updates/", nil)
 	req.Header.Set("X-Real-IP", "10.1.2.3")
 	rr := httptest.NewRecorder()
@@ -47,7 +48,7 @@ func TestTrustedSubnetMiddleware_ValidCIDR_RejectOutside(t *testing.T) {
 }
 
 func TestTrustedSubnetMiddleware_MissingOrBadIP_Rejects(t *testing.T) {
-	mw := TrustedSubnetMiddleware("10.0.0.0/8")
+	mw := middlewares.TrustedSubnetMiddleware("10.0.0.0/8")
 	// Missing header
 	req1 := httptest.NewRequest(http.MethodPost, "/updates/", nil)
 	rr1 := httptest.NewRecorder()
@@ -64,4 +65,3 @@ func TestTrustedSubnetMiddleware_MissingOrBadIP_Rejects(t *testing.T) {
 		t.Fatalf("bad ip status=%d", rr2.Code)
 	}
 }
-

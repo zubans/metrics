@@ -1,5 +1,4 @@
-package server_test
-package package main_test
+package tests
 
 import (
 	"context"
@@ -13,7 +12,7 @@ import (
 
 func TestGracefulShutdown(t *testing.T) {
 	srv := &http.Server{
-		Addr: "localhost:0", // Use port 0 to get a random available port
+		Addr: "localhost:0",
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 		}),

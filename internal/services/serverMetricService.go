@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strconv"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/zubans/metrics/internal/errdefs"
 	"github.com/zubans/metrics/internal/models"
 	"github.com/zubans/metrics/internal/storage"
-	"sort"
-	"strconv"
 )
 
 type MetricStorage interface {
@@ -208,4 +209,9 @@ func (s Storage) UpdateMetric(ctx context.Context, mData *MetricData) (*models.M
 
 func (s Storage) Ping(ctx context.Context) error {
 	return storage.PingDB(ctx)
+}
+
+// GetStorage returns the internal storage field for testing purposes
+func (s Storage) GetStorage() MetricStorage {
+	return s.storage
 }

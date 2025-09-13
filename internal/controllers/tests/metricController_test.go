@@ -1,5 +1,4 @@
 package controllers_test
-package package controllers_test
 
 import (
 	"bytes"
@@ -15,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zubans/metrics/internal/config"
+	"github.com/zubans/metrics/internal/controllers"
 	"github.com/zubans/metrics/internal/models"
 	"github.com/zubans/metrics/internal/services"
 )
@@ -58,11 +58,12 @@ func TestMetricsController_JSONSendMetrics(t *testing.T) {
 	cfg.AddressServer = server.URL[7:] //убираем "http://"
 
 	service := services.NewMetricsService(cfg)
-	controller := NewMetricsController(service)
+	controller := controllers.NewMetricsController(service)
 
 	t.Run("CollectMetrics populates metrics", func(t *testing.T) {
-		controller.metricsService.CollectMetrics()
-		metrics := controller.metricsService.GetMetrics()
+		service := controller.GetMetricsService()
+		service.CollectMetrics()
+		metrics := service.GetMetrics()
 
 		assert.NotEmpty(t, metrics.MetricList)
 		assert.Greater(t, metrics.PollCount, 0)
@@ -80,10 +81,11 @@ func TestMetricsController_JSONSendMetrics(t *testing.T) {
 	})
 
 	t.Run("Successful metrics sending", func(t *testing.T) {
-		controller.metricsService.CollectMetrics()
+		service := controller.GetMetricsService()
+		service.CollectMetrics()
 		controller.SendMetrics()
 
-		metrics := controller.metricsService.GetMetrics()
+		metrics := service.GetMetrics()
 		assert.Len(t, metrics.MetricList, 29)
 	})
 
@@ -91,7 +93,7 @@ func TestMetricsController_JSONSendMetrics(t *testing.T) {
 		// Тест ошибки теперь не может напрямую мокать httpClient,
 		// так как он инкапсулирован в транспорте
 		// Оставляем базовый тест функциональности
-		mc := NewMetricsController(service)
+		mc := controllers.NewMetricsController(service)
 
 		logBuffer := bytes.NewBuffer(nil)
 		log.SetOutput(logBuffer)
@@ -101,7 +103,8 @@ func TestMetricsController_JSONSendMetrics(t *testing.T) {
 		mc.SendMetrics()
 
 		// Проверяем, что метрики собираются
-		metrics := mc.metricsService.GetMetrics()
+		service := mc.GetMetricsService()
+		metrics := service.GetMetrics()
 		assert.NotEmpty(t, metrics.MetricList)
 	})
 }
@@ -112,7 +115,7 @@ func TestErrorScenarios(t *testing.T) {
 	}
 
 	service := services.NewMetricsService(cfg)
-	controller := NewMetricsController(service)
+	controller := controllers.NewMetricsController(service)
 
 	controller.UpdateMetrics()
 
@@ -122,7 +125,8 @@ func TestErrorScenarios(t *testing.T) {
 	t.Run("Connection error", func(t *testing.T) {
 		controller.SendMetrics()
 		// Проверяем, что метрики собираются, даже если отправка не удается
-		metrics := controller.metricsService.GetMetrics()
+		service := controller.GetMetricsService()
+		metrics := service.GetMetrics()
 		assert.NotEmpty(t, metrics.MetricList)
 	})
 }

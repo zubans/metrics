@@ -40,3 +40,8 @@ func (mc *MetricsController) Close() {
 		log.Printf("Error closing transport: %v", err)
 	}
 }
+
+// GetMetricsService returns the metrics service for testing purposes
+func (mc *MetricsController) GetMetricsService() *services.MetricsService {
+	return mc.metricsService
+}

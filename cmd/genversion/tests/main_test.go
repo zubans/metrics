@@ -1,5 +1,4 @@
 package genversion_test
-package package main_test
 
 import (
 	"os"
@@ -7,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/zubans/metrics/internal/version"
 )
 
 func TestGetGitTag(t *testing.T) {
@@ -35,7 +36,7 @@ func TestGetGitTag(t *testing.T) {
 			}
 			defer os.Chdir(originalDir)
 
-			got := getGitTag(tt.fallback)
+			got := version.GetGitTag(tt.fallback)
 			if got != tt.want {
 				t.Errorf("getGitTag() = %v, want %v", got, tt.want)
 			}
@@ -44,7 +45,7 @@ func TestGetGitTag(t *testing.T) {
 }
 
 func TestGetBuildDate(t *testing.T) {
-	got := getBuildDate()
+	got := version.GetBuildDate()
 
 	if got == "" {
 		t.Error("getBuildDate() returned empty string")
@@ -81,7 +82,7 @@ func TestGetGitCommit(t *testing.T) {
 			}
 			defer os.Chdir(originalDir)
 
-			got := getGitCommit()
+			got := version.GetGitCommit()
 			if got != tt.want {
 				t.Errorf("getGitCommit() = %v, want %v", got, tt.want)
 			}
@@ -112,7 +113,7 @@ func TestFindProjectRoot(t *testing.T) {
 	}
 	defer os.Chdir(originalDir)
 
-	got := findProjectRoot()
+	got := version.FindProjectRoot()
 	expected := tempDir
 
 	if got != expected {
@@ -192,9 +193,9 @@ func PrintBuildInfo() {
 		t.Fatalf("Failed to create fallback file: %v", err)
 	}
 
-	buildVersion := getGitTag("N/A")
-	buildDate := getBuildDate()
-	buildCommit := getGitCommit()
+	buildVersion := version.GetGitTag("N/A")
+	buildDate := version.GetBuildDate()
+	buildCommit := version.GetGitCommit()
 
 	if buildVersion != "N/A" {
 		t.Errorf("Expected buildVersion to be 'N/A', got %s", buildVersion)
@@ -208,7 +209,7 @@ func PrintBuildInfo() {
 		t.Errorf("Expected buildCommit to be 'N/A', got %s", buildCommit)
 	}
 
-	projectRoot := findProjectRoot()
+	projectRoot := version.FindProjectRoot()
 	if projectRoot != tempDir {
 		t.Errorf("Expected projectRoot to be %s, got %s", tempDir, projectRoot)
 	}
@@ -248,7 +249,7 @@ func TestGetGitTagWithRealRepo(t *testing.T) {
 	}
 	defer os.Chdir(originalDir)
 
-	got := getGitTag("fallback")
+	got := version.GetGitTag("fallback")
 	if got != "v1.0.0" {
 		t.Errorf("getGitTag() = %v, want v1.0.0", got)
 	}
