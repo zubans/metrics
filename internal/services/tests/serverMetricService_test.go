@@ -1,9 +1,11 @@
-package services
+package services_test
 
 import (
 	"context"
-	"github.com/zubans/metrics/internal/models"
 	"testing"
+
+	"github.com/zubans/metrics/internal/models"
+	"github.com/zubans/metrics/internal/services"
 )
 
 type MockMetricStorage struct {
@@ -64,13 +66,13 @@ func (m *MockMetricStorage) UpdateMetrics(ctx context.Context, metrics []models.
 
 func TestNewMetricService(t *testing.T) {
 	mockStorage := NewMockMetricStorage()
-	service := NewMetricService(mockStorage)
+	service := services.NewMetricService(mockStorage)
 
 	if service == nil {
 		t.Fatal("NewMetricService returned nil")
 	}
 
-	if service.storage != mockStorage {
+	if service.GetStorage() != mockStorage {
 		t.Error("Expected storage to be set correctly")
 	}
 }
@@ -121,13 +123,13 @@ func TestNewMetricData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var metricData *MetricData
+			var metricData *services.MetricData
 			var err error
 
 			if tt.value != "" {
-				metricData, err = NewMetricData(tt.metricType, tt.metricName, tt.value)
+				metricData, err = services.NewMetricData(tt.metricType, tt.metricName, tt.value)
 			} else {
-				metricData, err = NewMetricData(tt.metricType, tt.metricName)
+				metricData, err = services.NewMetricData(tt.metricType, tt.metricName)
 			}
 
 			if tt.expectError {
@@ -201,13 +203,13 @@ func TestParseMetricValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			metricData := &MetricData{
+			metricData := &services.MetricData{
 				Type:  "gauge",
 				Name:  "test",
 				Value: &tt.value,
 			}
 
-			value, err := ParseMetricValue(metricData)
+			value, err := services.ParseMetricValue(metricData)
 
 			if tt.expectError {
 				if err == nil {
@@ -229,12 +231,12 @@ func TestParseMetricValue(t *testing.T) {
 }
 
 func TestParseMetricValue_NilValue(t *testing.T) {
-	metricData := &MetricData{
+	metricData := &services.MetricData{
 		Type: "gauge",
 		Name: "test",
 	}
 
-	_, err := ParseMetricValue(metricData)
+	_, err := services.ParseMetricValue(metricData)
 	if err == nil {
 		t.Error("Expected error for nil value")
 	}
@@ -242,7 +244,7 @@ func TestParseMetricValue_NilValue(t *testing.T) {
 
 func TestStorage_ShowMetrics(t *testing.T) {
 	mockStorage := NewMockMetricStorage()
-	service := NewMetricService(mockStorage)
+	service := services.NewMetricService(mockStorage)
 
 	mockStorage.UpdateGauge(context.Background(), "test_gauge", 123.45)
 	mockStorage.UpdateCounter(context.Background(), "test_counter", 100)
@@ -272,7 +274,7 @@ func TestStorage_ShowMetrics(t *testing.T) {
 
 func TestStorage_GetMetric(t *testing.T) {
 	mockStorage := NewMockMetricStorage()
-	service := NewMetricService(mockStorage)
+	service := services.NewMetricService(mockStorage)
 
 	mockStorage.UpdateGauge(context.Background(), "test_gauge", 123.45)
 	mockStorage.UpdateCounter(context.Background(), "test_counter", 100)
@@ -316,7 +318,7 @@ func TestStorage_GetMetric(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			metricData := &MetricData{
+			metricData := &services.MetricData{
 				Type: tt.metricType,
 				Name: tt.metricName,
 			}
@@ -344,7 +346,7 @@ func TestStorage_GetMetric(t *testing.T) {
 
 func TestStorage_GetJSONMetric(t *testing.T) {
 	mockStorage := NewMockMetricStorage()
-	service := NewMetricService(mockStorage)
+	service := services.NewMetricService(mockStorage)
 
 	mockStorage.UpdateGauge(context.Background(), "test_gauge", 123.45)
 	mockStorage.UpdateCounter(context.Background(), "test_counter", 100)
@@ -409,7 +411,7 @@ func TestStorage_GetJSONMetric(t *testing.T) {
 
 func TestStorage_UpdateMetric(t *testing.T) {
 	mockStorage := NewMockMetricStorage()
-	service := NewMetricService(mockStorage)
+	service := services.NewMetricService(mockStorage)
 
 	tests := []struct {
 		name        string
@@ -464,7 +466,7 @@ func TestStorage_UpdateMetric(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			metricData := &MetricData{
+			metricData := &services.MetricData{
 				Type: tt.metricType,
 				Name: tt.metricName,
 			}
@@ -510,7 +512,7 @@ func TestStorage_UpdateMetric(t *testing.T) {
 
 func TestStorage_UpdateMetrics(t *testing.T) {
 	mockStorage := NewMockMetricStorage()
-	service := NewMetricService(mockStorage)
+	service := services.NewMetricService(mockStorage)
 
 	tests := []struct {
 		name        string
@@ -567,7 +569,7 @@ func TestStorage_UpdateMetrics(t *testing.T) {
 
 func TestStorage_InterfaceCompliance(t *testing.T) {
 	mockStorage := NewMockMetricStorage()
-	service := NewMetricService(mockStorage)
+	service := services.NewMetricService(mockStorage)
 
 	if service == nil {
 		t.Fatal("NewMetricService should not return nil")
@@ -583,7 +585,7 @@ func TestStorage_InterfaceCompliance(t *testing.T) {
 		t.Error("ShowMetrics should return non-empty result")
 	}
 
-	metricData := &MetricData{
+	metricData := &services.MetricData{
 		Type:  "gauge",
 		Name:  "test_metric",
 		Value: stringPtr("123.45"),

@@ -11,8 +11,10 @@ import (
 
 	"github.com/zubans/metrics/internal/config"
 	"github.com/zubans/metrics/internal/controllers"
+	"github.com/zubans/metrics/internal/logger"
 	"github.com/zubans/metrics/internal/services"
 	"github.com/zubans/metrics/internal/version"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -20,14 +22,22 @@ func main() {
 
 	var cfg = config.NewAgentConfig()
 
+	// Initialize logger
+	if err := logger.Initialize("info"); err != nil {
+		log.Printf("logger initialization failed: %v", err)
+	}
+
 	metricsService := services.NewMetricsService(cfg)
 
-	defer log.Println("stopped")
+	defer logger.Log.Info("Agent stopped")
 
-	log.Printf("Agent send to server address %s", cfg.AddressServer)
-	log.Printf("Send interval: %v, Poll interval: %v", cfg.SendInterval, cfg.PollInterval)
+	logger.Log.Info("Agent starting",
+		zap.String("server_address", cfg.AddressServer),
+		zap.Duration("send_interval", cfg.SendInterval),
+		zap.Duration("poll_interval", cfg.PollInterval))
 
 	metricsController := controllers.NewMetricsController(metricsService)
+	defer metricsController.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -42,8 +52,7 @@ func main() {
 	cancel()
 	wg.Wait()
 
-	metricsController.OldJSONSendMetrics()
-	metricsController.JSONSendMetrics()
+	metricsController.SendMetrics()
 }
 
 func run(ctx context.Context, wg *sync.WaitGroup, metricsController *controllers.MetricsController, cfg *config.AgentConfig) {
@@ -71,8 +80,7 @@ func run(ctx context.Context, wg *sync.WaitGroup, metricsController *controllers
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				metricsController.OldJSONSendMetrics()
-				metricsController.JSONSendMetrics()
+				metricsController.SendMetrics()
 			}
 		}
 	}()

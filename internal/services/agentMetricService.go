@@ -1,10 +1,11 @@
 package services
 
 import (
-	"github.com/zubans/metrics/internal/config"
-	"github.com/zubans/metrics/internal/models"
 	"math/rand"
 	"runtime"
+
+	"github.com/zubans/metrics/internal/config"
+	"github.com/zubans/metrics/internal/models"
 )
 
 type MetricsCollector interface {
@@ -69,5 +70,10 @@ func (ms *MetricsService) addMetrics(m runtime.MemStats) {
 }
 
 func (ms *MetricsService) GetMetrics() *models.Metrics {
+	return ms.metrics
+}
+
+// GetMetricsInternal returns the internal metrics field for testing purposes
+func (ms *MetricsService) GetMetricsInternal() *models.Metrics {
 	return ms.metrics
 }

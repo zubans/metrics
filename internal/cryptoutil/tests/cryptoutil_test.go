@@ -1,4 +1,4 @@
-package cryptoutil
+package cryptoutil_test
 
 import (
 	"crypto/rand"
@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/zubans/metrics/internal/cryptoutil"
 )
 
 func generateRSAKeyPair(tb testing.TB) (*rsa.PrivateKey, *rsa.PublicKey) {
@@ -68,17 +70,17 @@ func TestLoadKeys_PKCS1_PKIX(t *testing.T) {
 	pubPath := writePublicKeyPKIX(t, dir, pub)
 	privPath := writePrivateKeyPKCS1(t, dir, priv)
 
-	loadedPub, err := LoadPublicKey(pubPath)
+	loadedPub, err := cryptoutil.LoadPublicKey(pubPath)
 	if err != nil {
-		t.Fatalf("LoadPublicKey error: %v", err)
+		t.Fatalf("cryptoutil.LoadPublicKey error: %v", err)
 	}
 	if loadedPub.N.Cmp(pub.N) != 0 || loadedPub.E != pub.E {
 		t.Fatalf("loaded public key does not match")
 	}
 
-	loadedPriv, err := LoadPrivateKey(privPath)
+	loadedPriv, err := cryptoutil.LoadPrivateKey(privPath)
 	if err != nil {
-		t.Fatalf("LoadPrivateKey error: %v", err)
+		t.Fatalf("cryptoutil.LoadPrivateKey error: %v", err)
 	}
 	if loadedPriv.N.Cmp(priv.N) != 0 || loadedPriv.E != priv.E {
 		t.Fatalf("loaded private key does not match")
@@ -90,9 +92,9 @@ func TestLoadPrivateKey_PKCS8(t *testing.T) {
 	dir := t.TempDir()
 	privPath := writePrivateKeyPKCS8(t, dir, priv)
 
-	loadedPriv, err := LoadPrivateKey(privPath)
+	loadedPriv, err := cryptoutil.LoadPrivateKey(privPath)
 	if err != nil {
-		t.Fatalf("LoadPrivateKey(PKCS8) error: %v", err)
+		t.Fatalf("cryptoutil.LoadPrivateKey(PKCS8) error: %v", err)
 	}
 	if loadedPriv.N.Cmp(priv.N) != 0 || loadedPriv.E != priv.E {
 		t.Fatalf("loaded private key does not match")
@@ -103,14 +105,14 @@ func TestEncryptDecrypt_RoundTrip(t *testing.T) {
 	priv, pub := generateRSAKeyPair(t)
 	plaintext := []byte("hello, metrics!")
 
-	env, err := EncryptHybrid(pub, plaintext)
+	env, err := cryptoutil.EncryptHybrid(pub, plaintext)
 	if err != nil {
-		t.Fatalf("EncryptHybrid error: %v", err)
+		t.Fatalf("cryptoutil.EncryptHybrid error: %v", err)
 	}
 
-	got, err := DecryptHybrid(priv, env)
+	got, err := cryptoutil.DecryptHybrid(priv, env)
 	if err != nil {
-		t.Fatalf("DecryptHybrid error: %v", err)
+		t.Fatalf("cryptoutil.DecryptHybrid error: %v", err)
 	}
 	if string(got) != string(plaintext) {
 		t.Fatalf("roundtrip mismatch: got %q want %q", got, plaintext)
@@ -119,9 +121,9 @@ func TestEncryptDecrypt_RoundTrip(t *testing.T) {
 
 func TestDecrypt_TamperedCiphertext_Fails(t *testing.T) {
 	priv, pub := generateRSAKeyPair(t)
-	env, err := EncryptHybrid(pub, []byte("payload"))
+	env, err := cryptoutil.EncryptHybrid(pub, []byte("payload"))
 	if err != nil {
-		t.Fatalf("EncryptHybrid error: %v", err)
+		t.Fatalf("cryptoutil.EncryptHybrid error: %v", err)
 	}
 	// flip first byte of Data
 	dataBytes, err := base64.StdEncoding.DecodeString(env.Data)
@@ -130,7 +132,7 @@ func TestDecrypt_TamperedCiphertext_Fails(t *testing.T) {
 	}
 	dataBytes[0] ^= 0xFF
 	env.Data = base64.StdEncoding.EncodeToString(dataBytes)
-	if _, err := DecryptHybrid(priv, env); err == nil {
+	if _, err := cryptoutil.DecryptHybrid(priv, env); err == nil {
 		t.Fatalf("expected decryption error for tampered data, got nil")
 	}
 }
@@ -138,11 +140,11 @@ func TestDecrypt_TamperedCiphertext_Fails(t *testing.T) {
 func TestDecrypt_WithWrongPrivateKey_Fails(t *testing.T) {
 	_, pub1 := generateRSAKeyPair(t)
 	priv2, _ := generateRSAKeyPair(t)
-	env, err := EncryptHybrid(pub1, []byte("abc"))
+	env, err := cryptoutil.EncryptHybrid(pub1, []byte("abc"))
 	if err != nil {
-		t.Fatalf("EncryptHybrid error: %v", err)
+		t.Fatalf("cryptoutil.EncryptHybrid error: %v", err)
 	}
-	if _, err := DecryptHybrid(priv2, env); err == nil {
+	if _, err := cryptoutil.DecryptHybrid(priv2, env); err == nil {
 		t.Fatalf("expected error when decrypting with wrong private key")
 	}
 }
@@ -157,10 +159,10 @@ func TestLoadKeys_InvalidPEM(t *testing.T) {
 	if err := os.WriteFile(privPath, []byte("not pem"), 0o600); err != nil {
 		t.Fatalf("write: %v", err)
 	}
-	if _, err := LoadPublicKey(pubPath); err == nil {
+	if _, err := cryptoutil.LoadPublicKey(pubPath); err == nil {
 		t.Fatalf("expected error for invalid public pem")
 	}
-	if _, err := LoadPrivateKey(privPath); err == nil {
+	if _, err := cryptoutil.LoadPrivateKey(privPath); err == nil {
 		t.Fatalf("expected error for invalid private pem")
 	}
 }
@@ -172,7 +174,7 @@ func TestLoadPrivateKey_UnsupportedType(t *testing.T) {
 	if err := os.WriteFile(p, pemBytes, 0o600); err != nil {
 		t.Fatalf("write: %v", err)
 	}
-	if _, err := LoadPrivateKey(p); err == nil {
+	if _, err := cryptoutil.LoadPrivateKey(p); err == nil {
 		t.Fatalf("expected error for unsupported private key type")
 	}
 }

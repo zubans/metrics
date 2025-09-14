@@ -4,15 +4,16 @@ import (
 	"fmt"
 	"go/format"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/zubans/metrics/internal/version"
 )
 
 func main() {
-	buildVersion := getGitTag("N/A")
-	buildDate := getBuildDate()
-	buildCommit := getGitCommit()
+	buildVersion := version.GetGitTag("N/A")
+	buildDate := version.GetBuildDate()
+	buildCommit := version.GetGitCommit()
 
 	var sb strings.Builder
 	sb.WriteString(`// Package version содержит функциональность для работы с версией приложения.
@@ -51,7 +52,7 @@ func PrintBuildInfo() {
 		os.Exit(1)
 	}
 
-	projectRoot := findProjectRoot()
+	projectRoot := version.FindProjectRoot()
 	outputPath := filepath.Join(projectRoot, "internal", "version", "version.go")
 	fallbackPath := filepath.Join(projectRoot, "internal", "version", "version_fallback.go")
 
@@ -85,53 +86,3 @@ func PrintBuildInfo() {
 	fmt.Printf("  Date: %s\n", buildDate)
 	fmt.Printf("  Commit: %s\n", buildCommit)
 }
-
-func findProjectRoot() string {
-	currentDir, err := os.Getwd()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to format source: %v\n", err)
-		os.Exit(1)
-	}
-
-	for {
-		if _, err := os.Stat(filepath.Join(currentDir, "go.mod")); err == nil {
-			return currentDir
-		}
-
-		parent := filepath.Dir(currentDir)
-		if parent == currentDir {
-			fmt.Fprintf(os.Stderr, "%s: %v\n", errGoModNotFound, err)
-			os.Exit(1)
-		}
-		currentDir = parent
-	}
-}
-
-func getGitTag(fallback string) string {
-	cmd := exec.Command("git", "describe", "--tags", "--abbrev=0")
-	output, err := cmd.Output()
-	if err != nil {
-		return fallback
-	}
-	return strings.TrimSpace(string(output))
-}
-
-func getBuildDate() string {
-	cmd := exec.Command("date", "-u", "+%Y-%m-%d_%H:%M:%S_UTC")
-	output, err := cmd.Output()
-	if err != nil {
-		return "N/A"
-	}
-	return strings.TrimSpace(string(output))
-}
-
-func getGitCommit() string {
-	cmd := exec.Command("git", "rev-parse", "HEAD")
-	output, err := cmd.Output()
-	if err != nil {
-		return "N/A"
-	}
-	return strings.TrimSpace(string(output))
-}
-
-const errGoModNotFound = "go.mod not found in any parent directory"
