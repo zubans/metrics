@@ -1,10 +1,11 @@
 package services_test
 
 import (
+	"testing"
+
 	"github.com/zubans/metrics/internal/config"
 	"github.com/zubans/metrics/internal/models"
 	"github.com/zubans/metrics/internal/services"
-	"testing"
 )
 
 func TestNewMetricsService(t *testing.T) {
