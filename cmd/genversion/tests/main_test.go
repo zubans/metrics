@@ -10,6 +10,15 @@ import (
 	"github.com/zubans/metrics/internal/version"
 )
 
+// normalizePath resolves symlinks to handle macOS /private/var vs /var issue
+func normalizePath(path string) string {
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return path
+	}
+	return resolved
+}
+
 func TestGetGitTag(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -116,6 +125,10 @@ func TestFindProjectRoot(t *testing.T) {
 	got := version.FindProjectRoot()
 	expected := tempDir
 
+	// Normalize paths to handle macOS symlink differences
+	got = normalizePath(got)
+	expected = normalizePath(expected)
+
 	if got != expected {
 		t.Errorf("findProjectRoot() = %v, want %v", got, expected)
 	}
@@ -210,6 +223,10 @@ func PrintBuildInfo() {
 	}
 
 	projectRoot := version.FindProjectRoot()
+	// Normalize paths to handle macOS symlink differences
+	projectRoot = normalizePath(projectRoot)
+	tempDir = normalizePath(tempDir)
+
 	if projectRoot != tempDir {
 		t.Errorf("Expected projectRoot to be %s, got %s", tempDir, projectRoot)
 	}

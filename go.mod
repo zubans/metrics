@@ -1,6 +1,6 @@
 module github.com/zubans/metrics
 
-go 1.25.1
+go 1.24.1
 
 require (
 	github.com/Antonboom/testifylint v1.6.1

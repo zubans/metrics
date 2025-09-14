@@ -1,11 +1,10 @@
 package services_test
 
 import (
-	"testing"
-
 	"github.com/zubans/metrics/internal/config"
 	"github.com/zubans/metrics/internal/models"
 	"github.com/zubans/metrics/internal/services"
+	"testing"
 )
 
 func TestNewMetricsService(t *testing.T) {
@@ -25,13 +24,12 @@ func TestNewMetricsService(t *testing.T) {
 		t.Errorf("Expected config to be %v, got %v", cfg, service.Cfg)
 	}
 
-	metrics := service.GetMetricsInternal()
-	if metrics == nil {
+	if service.GetMetricsInternal() == nil {
 		t.Error("Expected metrics to be initialized")
 	}
 
-	if metrics.PollCount != 0 {
-		t.Errorf("Expected initial PollCount to be 0, got %d", metrics.PollCount)
+	if service.GetMetricsInternal().PollCount != 0 {
+		t.Errorf("Expected initial PollCount to be 0, got %d", service.GetMetricsInternal().PollCount)
 	}
 }
 
@@ -44,19 +42,18 @@ func TestMetricsService_CollectMetrics(t *testing.T) {
 
 	service := services.NewMetricsService(cfg)
 
-	metrics := service.GetMetricsInternal()
-	initialPollCount := metrics.PollCount
+	initialPollCount := service.GetMetricsInternal().PollCount
 	if initialPollCount != 0 {
 		t.Errorf("Expected initial PollCount to be 0, got %d", initialPollCount)
 	}
 
 	service.CollectMetrics()
 
-	if metrics.PollCount != initialPollCount+1 {
-		t.Errorf("Expected PollCount to be %d, got %d", initialPollCount+1, metrics.PollCount)
+	if service.GetMetricsInternal().PollCount != initialPollCount+1 {
+		t.Errorf("Expected PollCount to be %d, got %d", initialPollCount+1, service.GetMetricsInternal().PollCount)
 	}
 
-	if len(metrics.MetricList) == 0 {
+	if len(service.GetMetricsInternal().MetricList) == 0 {
 		t.Error("Expected metrics to be collected")
 	}
 
@@ -70,7 +67,7 @@ func TestMetricsService_CollectMetrics(t *testing.T) {
 	}
 
 	metricNames := make(map[string]bool)
-	for _, metric := range metrics.MetricList {
+	for _, metric := range service.GetMetricsInternal().MetricList {
 		metricNames[metric.Name] = true
 	}
 
@@ -106,8 +103,7 @@ func TestMetricsService_GetMetrics(t *testing.T) {
 		t.Error("Expected metrics to be present")
 	}
 
-	internalMetrics := service.GetMetricsInternal()
-	if metrics != internalMetrics {
+	if metrics != service.GetMetricsInternal() {
 		t.Error("GetMetrics should return the same metrics object")
 	}
 }
@@ -125,15 +121,14 @@ func TestMetricsService_CollectMetrics_MultipleCalls(t *testing.T) {
 		service.CollectMetrics()
 	}
 
-	metrics := service.GetMetricsInternal()
 	expectedPollCount := 5
-	if metrics.PollCount != expectedPollCount {
-		t.Errorf("Expected PollCount to be %d, got %d", expectedPollCount, metrics.PollCount)
+	if service.GetMetricsInternal().PollCount != expectedPollCount {
+		t.Errorf("Expected PollCount to be %d, got %d", expectedPollCount, service.GetMetricsInternal().PollCount)
 	}
 
 	expectedMetricCount := 29 // 28 runtime метрик + PollCount
-	if len(metrics.MetricList) != expectedMetricCount {
-		t.Errorf("Expected %d metrics, got %d", expectedMetricCount, len(metrics.MetricList))
+	if len(service.GetMetricsInternal().MetricList) != expectedMetricCount {
+		t.Errorf("Expected %d metrics, got %d", expectedMetricCount, len(service.GetMetricsInternal().MetricList))
 	}
 }
 
@@ -147,11 +142,10 @@ func TestMetricsService_MetricsTypes(t *testing.T) {
 	service := services.NewMetricsService(cfg)
 	service.CollectMetrics()
 
-	metrics := service.GetMetricsInternal()
 	gaugeCount := 0
 	counterCount := 0
 
-	for _, metric := range metrics.MetricList {
+	for _, metric := range service.GetMetricsInternal().MetricList {
 		switch metric.Type {
 		case models.Gauge:
 			gaugeCount++
@@ -171,7 +165,7 @@ func TestMetricsService_MetricsTypes(t *testing.T) {
 	}
 
 	pollCountFound := false
-	for _, metric := range metrics.MetricList {
+	for _, metric := range service.GetMetricsInternal().MetricList {
 		if metric.Name == "PollCount" && metric.Type == models.Counter {
 			pollCountFound = true
 			break
@@ -193,9 +187,8 @@ func TestMetricsService_RandomValue(t *testing.T) {
 	service := services.NewMetricsService(cfg)
 	service.CollectMetrics()
 
-	metrics := service.GetMetricsInternal()
 	randomValueFound := false
-	for _, metric := range metrics.MetricList {
+	for _, metric := range service.GetMetricsInternal().MetricList {
 		if metric.Name == "RandomValue" && metric.Type == models.Gauge {
 			randomValueFound = true
 			break
@@ -245,9 +238,8 @@ func TestMetricsService_ConcurrentAccess(t *testing.T) {
 		<-done
 	}
 
-	metrics := service.GetMetricsInternal()
 	expectedPollCount := 10
-	if metrics.PollCount != expectedPollCount {
-		t.Errorf("Expected PollCount to be %d, got %d", expectedPollCount, metrics.PollCount)
+	if service.GetMetricsInternal().PollCount != expectedPollCount {
+		t.Errorf("Expected PollCount to be %d, got %d", expectedPollCount, service.GetMetricsInternal().PollCount)
 	}
 }
